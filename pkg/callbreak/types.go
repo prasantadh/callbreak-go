@@ -12,5 +12,14 @@ type Hand [NTricks]deck.Card
 
 type Trick struct {
 	Cards [NTricks]deck.Card
-	Lead  int
+	Lead  deck.Card
+	Size  int
 }
+
+// a player bot needs to provide a Play function
+// that will take the current trick and return the card to play
+type PlayerInterface interface {
+	Play(Trick) deck.Card
+}
+
+type BotInterface PlayerInterface
