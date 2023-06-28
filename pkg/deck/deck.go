@@ -1,20 +1,14 @@
 package deck
 
-import (
-	"github.com/prasantadh/callbreak-go/pkg/card"
-	"github.com/prasantadh/callbreak-go/pkg/rank"
-	"github.com/prasantadh/callbreak-go/pkg/suit"
-)
-
 type Deck struct {
-	cards []card.Card
+	cards []Card
 }
 
-func New() *Deck {
-	d := &Deck{}
-	for _, r := range rank.All {
-		for _, s := range suit.All {
-			d.cards = append(d.cards, card.Card{Rank: r, Suit: s})
+func New() Deck {
+	d := Deck{}
+	for _, r := range Ranks {
+		for _, s := range Suits {
+			d.cards = append(d.cards, Card{Rank: r, Suit: s})
 		}
 	}
 	return d
