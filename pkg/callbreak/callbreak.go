@@ -1,4 +1,4 @@
-package game
+package callbreak
 
 import (
 	"github.com/prasantadh/callbreak-go/pkg/deck"
