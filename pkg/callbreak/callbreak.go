@@ -13,7 +13,7 @@ type Game struct { // a game is
 func (g *Game) New(p string) *Game {
 	game := &Game{}
 
-	game.Deck = *deck.New()
+	game.Deck = deck.New()
 
 	game.Players[0] = player.New(p)
 	for i := 1; i < NPlayers; i++ {

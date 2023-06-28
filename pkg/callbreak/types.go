@@ -9,3 +9,8 @@ const (
 )
 
 type Hand [NTricks]deck.Card
+
+type Trick struct {
+	Cards [NTricks]deck.Card
+	Lead  int
+}
