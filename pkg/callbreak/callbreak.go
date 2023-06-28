@@ -1,35 +1,40 @@
 package callbreak
 
 import (
+	"fmt"
+
 	"github.com/prasantadh/callbreak-go/pkg/deck"
-	"github.com/prasantadh/callbreak-go/pkg/player"
 )
 
-type Game struct { // a game is
-	Players   [NPlayers]*player.Player // between 4 players
-	deck.Deck                          // with a standard deck of cards
+type CallBreak struct { // a game is
+	players   [NPlayers]PlayerInterface // between 4 players
+	deck.Deck                           // with a standard deck of cards
+	nPlayers  int                       // number of players currently in the game
 }
 
-func (g *Game) New(p string) *Game {
-	game := &Game{}
-
+func New() *CallBreak {
+	game := &CallBreak{}
 	game.Deck = deck.New()
+	return game
+}
 
-	game.Players[0] = player.New(p)
-	for i := 1; i < NPlayers; i++ {
-		game.Players[i] = player.New("bot" + string(i))
+func (g *CallBreak) AddPlayer(p PlayerInterface) error {
+	if g.nPlayers == NPlayers {
+		return fmt.Errorf("couldn't add more players: table already full")
 	}
 
-	return game
+	g.players[g.nPlayers] = p
+	return nil
 
 }
 
-func (g *Game) Play() {
+func (g *CallBreak) Play(c deck.Card) error {
 
 	/*
 		for each player,
 			player.Play
 			notify all other players of the played cards
 	*/
+	return nil
 
 }
