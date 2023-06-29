@@ -20,16 +20,8 @@ func New(n string) *Player {
 
 func (p *Player) Play(t callbreak.Trick) (deck.Card, error) {
 
-	// // play the first playable card
-	// for i, c := range p.Hand {
-	// 	if c.Playable {
-	// 		p.Hand[i].Playable = false
-	// 		return c
-	// 	}
-	// }
-
 	// for an empty trick play the first playable card on hand
-	if t.Size == 0 {
+	if count := len(t.Cards); count == 0 {
 		for i, c := range p.Hand {
 			if c.Playable {
 				p.Hand[i].Playable = false

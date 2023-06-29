@@ -42,10 +42,18 @@ func main() {
 
 	// play the cards
 	fmt.Printf("The game:\n")
-	for i := 0; i < callbreak.NTricks; i++ {
+	// for now just check by playing 5 tricks
+	for i := 0; i < 1; i++ {
+		trick := callbreak.Trick{}
 		for _, player := range bots {
-			c, _ := player.Play(game.CurrentTrick)
-			fmt.Printf("%s plays [%s %s]\n", player.Name, string(c.Suit), c.Rank)
+			c, _ := player.Play(trick)
+			fmt.Printf("%s plays [%c %s] to:   ", player.Name, c.Suit, c.Rank)
+			for _, c := range trick.Cards {
+				fmt.Printf("%c %s   ", c.Suit, c.Rank)
+			}
+			fmt.Println()
+			trick.Cards = append(trick.Cards, c)
+			trick.Lead = trick.Cards[0]
 			err := game.Play(c)
 			if err != nil {
 				msg := fmt.Errorf("invalid move from a player")
