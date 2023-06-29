@@ -8,7 +8,7 @@ const (
 	NTricks  = NCards / NPlayers
 )
 
-type Hand [NTricks]deck.Card
+type Hand []deck.Card
 
 type Trick struct {
 	Cards [NTricks]deck.Card
@@ -16,9 +16,10 @@ type Trick struct {
 	Size  int
 }
 
-// a player bot needs to provide a Play function
-// that will take the current trick and return the card to play
+// a player must be able to take a card dealt in the game
+// and be able to play a card when it's their turn
 type PlayerInterface interface {
+	Take(deck.Card) error
 	Play(Trick) deck.Card
 }
 
