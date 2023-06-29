@@ -21,4 +21,4 @@
 go.work
 
 # compiled program binary
-callbreak-go
+/callbreak-go
