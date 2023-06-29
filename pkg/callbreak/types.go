@@ -11,7 +11,7 @@ const (
 type Hand []deck.Card
 
 type Trick struct {
-	Cards [NTricks]deck.Card
+	Cards []deck.Card
 	Lead  deck.Card
 	Size  int
 }
