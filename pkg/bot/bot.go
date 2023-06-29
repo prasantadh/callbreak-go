@@ -33,22 +33,25 @@ func (p *Player) Play(t callbreak.Trick) (deck.Card, error) {
 	}
 
 	// if we have a card of the leading suit, play it
-	for _, card := range p.Hand {
+	for i, card := range p.Hand {
 		if card.Suit == t.Lead.Suit &&
 			card.Playable {
 			// TODO: sort the hand by rank so that we play the highest
 			// by default. IMP because if there is a winning card,
 			// we must play the winning card
+			p.Hand[i].Playable = false
 			return card, nil
 		}
 	}
 
 	// if we have a Hukum card, play it
-	for _, card := range p.Hand {
+	for i, card := range p.Hand {
 		// TODO: eventually check to see if the hukum we are playing
 		// wins all cards in the trick, else play non-Hukum
 		// for now, playing the largest hukum is a valid move.
-		if card.Suit == deck.Hukum {
+		if card.Suit == deck.Hukum &&
+			card.Playable {
+			p.Hand[i].Playable = false
 			return card, nil
 		}
 	}
@@ -60,6 +63,7 @@ func (p *Player) Play(t callbreak.Trick) (deck.Card, error) {
 		if c.Playable {
 			p.Hand[i].Playable = false
 			ans = c
+			break
 		}
 	}
 	return ans, nil
