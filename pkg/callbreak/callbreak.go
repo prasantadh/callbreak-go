@@ -13,9 +13,7 @@ type CallBreak struct { // a game is
 }
 
 func New() *CallBreak {
-	game := &CallBreak{}
-	game.Deck = deck.New()
-	return game
+	return &CallBreak{}
 }
 
 func (g *CallBreak) AddPlayer(p PlayerInterface) error {
@@ -28,13 +26,25 @@ func (g *CallBreak) AddPlayer(p PlayerInterface) error {
 
 }
 
-func (g *CallBreak) Play(c deck.Card) error {
+func (g *CallBreak) Deal() (deck.Card, error) {
+	if len(g.Deck) == 1 {
+		return g.Deck[0], nil
+	}
 
-	/*
-		for each player,
-			player.Play
-			notify all other players of the played cards
-	*/
+	defer func() {
+		g.Deck = g.Deck[1:]
+	}()
+
+	return g.Deck[0], nil
+}
+
+func (g *CallBreak) CollectDeck() {
+	g.Deck = deck.New()
+}
+
+func (g *CallBreak) Play(c deck.Card) error {
+	// update internal state to indicate that
+	// a player has played a card in their turn
 	return nil
 
 }
