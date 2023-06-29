@@ -1,7 +1,11 @@
 package deck
 
+import "fmt"
+
+type Rank int8
+
 const (
-	Dua = 2 + iota
+	Dua Rank = 2 + iota
 	Tirka
 	Chauka
 	Panja
@@ -16,8 +20,6 @@ const (
 	Ekka
 )
 
-type Rank int8
-
 var Ranks [13]Rank = [...]Rank{Dua,
 	Tirka,
 	Chauka,
@@ -31,3 +33,17 @@ var Ranks [13]Rank = [...]Rank{Dua,
 	Missi,
 	Bassa,
 	Ekka}
+
+func (r Rank) String() string {
+	switch r {
+	case Gulam:
+		return "J"
+	case Missi:
+		return "Q"
+	case Bassa:
+		return "K"
+	case Ekka:
+		return "A"
+	}
+	return fmt.Sprintf("%d", r)
+}

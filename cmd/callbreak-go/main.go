@@ -44,7 +44,7 @@ func main() {
 	for _, b := range bots {
 		fmt.Printf("%s has cards: ", b.Name)
 		for _, c := range b.Hand {
-			fmt.Printf("[%s %d] ", string(c.Suit), c.Rank)
+			fmt.Printf("[%s %s] ", string(c.Suit), c.Rank)
 		}
 		fmt.Println()
 	}
@@ -55,7 +55,7 @@ func main() {
 		trick := callbreak.Trick{}
 		for _, player := range bots {
 			c := player.Play(trick)
-			fmt.Printf("%s plays [%s %d]\n", player.Name, string(c.Suit), c.Rank)
+			fmt.Printf("%s plays [%s %s]\n", player.Name, string(c.Suit), c.Rank)
 			err := game.Play(c)
 			if err != nil {
 				msg := fmt.Errorf("invalid move from a player")
