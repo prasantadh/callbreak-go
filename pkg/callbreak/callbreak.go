@@ -26,7 +26,9 @@ func (g *CallBreak) AddPlayer(p PlayerInterface) error {
 
 }
 
-// deal the next card to the next player who should get it
+// deal the cards to the players
+// each player can now make a call to GetHand
+// TODO: auto trigger this action when round starts
 func (g *CallBreak) Deal() error {
 	if count := len(g.players); count != 4 {
 		msg := fmt.Errorf("wrong number of players: wanted %d got %d", NPlayers, count)
@@ -34,8 +36,14 @@ func (g *CallBreak) Deal() error {
 	}
 
 	d := deck.New()
+	// TODO: make sure each player is dealt at least one Hukum
+	// and at least one of Q, K, A else shuffle again
 	for i, c := range d {
 		g.players[i%NPlayers].Take(c)
+	}
+
+	for i := range g.players {
+		g.players[i].hand.Sort()
 	}
 
 	return nil
