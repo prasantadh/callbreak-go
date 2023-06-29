@@ -36,6 +36,8 @@ var Ranks [13]Rank = [...]Rank{Dua,
 
 func (r Rank) String() string {
 	switch r {
+	case Dahar:
+		return "X" // TODO: revert this back to 10 once testing isn't "visual"
 	case Gulam:
 		return "J"
 	case Missi:
