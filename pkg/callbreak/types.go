@@ -19,8 +19,13 @@ type Trick struct {
 // a player must be able to take a card dealt in the game
 // and be able to play a card when it's their turn
 type PlayerInterface interface {
+	Play(Trick) (deck.Card, error)
 	Take(deck.Card) error
-	Play(Trick) deck.Card
 }
 
 type BotInterface PlayerInterface
+
+type player struct {
+	hand Hand
+	PlayerInterface
+}
