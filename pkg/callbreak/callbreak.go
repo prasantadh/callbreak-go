@@ -7,9 +7,9 @@ import (
 )
 
 type CallBreak struct { // a game is
-	players   [NPlayers]PlayerInterface // between 4 players
-	deck.Deck                           // with a standard deck of cards
-	nPlayers  int                       // number of players currently in the game
+	players      []player // between 4 players
+	deck.Deck             // with a standard deck of cards
+	CurrentTrick Trick
 }
 
 func New() *CallBreak {
@@ -17,31 +17,37 @@ func New() *CallBreak {
 }
 
 func (g *CallBreak) AddPlayer(p PlayerInterface) error {
-	if g.nPlayers == NPlayers {
+	if len(g.players) == NPlayers {
 		return fmt.Errorf("couldn't add more players: table already full")
 	}
 
-	g.players[g.nPlayers] = p
+	g.players = append(g.players, player{PlayerInterface: p})
 	return nil
 
 }
 
-func (g *CallBreak) Deal() (deck.Card, error) {
-	if len(g.Deck) == 1 {
-		return g.Deck[0], nil
+// deal the next card to the next player who should get it
+func (g *CallBreak) Deal() error {
+	if count := len(g.players); count != 4 {
+		msg := fmt.Errorf("wrong number of players: wanted %d got %d", NPlayers, count)
+		return msg
 	}
 
-	defer func() {
-		g.Deck = g.Deck[1:]
-	}()
+	d := deck.New()
+	for i, c := range d {
+		g.players[i%NPlayers].Take(c)
+	}
 
-	return g.Deck[0], nil
+	return nil
 }
 
-func (g *CallBreak) CollectDeck() {
-	g.Deck = deck.New()
+// get hand of the ith player of the game
+// TODO: authenticate before returning
+func (g *CallBreak) GetHand(i int) Hand {
+	return g.players[i].hand
 }
 
+// the next player in line playes the card c
 func (g *CallBreak) Play(c deck.Card) error {
 	// update internal state to indicate that
 	// a player has played a card in their turn

@@ -5,7 +5,6 @@ import (
 
 	"github.com/prasantadh/callbreak-go/pkg/bot"
 	"github.com/prasantadh/callbreak-go/pkg/callbreak"
-	"github.com/prasantadh/callbreak-go/pkg/deck"
 )
 
 // as a start we are implementing 4 bots playing themselves
@@ -27,17 +26,9 @@ func main() {
 	}
 
 	// deal a Deck of cards to players
-	game.CollectDeck()
-	fmt.Printf("The Deck: ")
-	for _, c := range game.Deck {
-		fmt.Printf("[%s %d]", string(c.Suit), c.Rank)
-	}
-	fmt.Println()
-	// fmt.Println(game.Deck, len(game.Deck), deck.Size)
-	for i := 0; i < deck.Size; i++ {
-		// fmt.Printf("dealing card %d\n", i)
-		c, _ := game.Deal()
-		bots[i%callbreak.NPlayers].Take(c)
+	game.Deal()
+	for i := range bots {
+		bots[i].Hand = game.GetHand(i)
 	}
 
 	// print the info
@@ -52,9 +43,8 @@ func main() {
 	// play the cards
 	fmt.Printf("The game:\n")
 	for i := 0; i < callbreak.NTricks; i++ {
-		trick := callbreak.Trick{}
 		for _, player := range bots {
-			c := player.Play(trick)
+			c, _ := player.Play(game.CurrentTrick)
 			fmt.Printf("%s plays [%s %s]\n", player.Name, string(c.Suit), c.Rank)
 			err := game.Play(c)
 			if err != nil {
