@@ -45,17 +45,7 @@ func (h *Hand) Sort() {
 func (h Hand) String() string {
 	var sb strings.Builder
 	for _, c := range h {
-		sb.WriteString("[")
-		sb.WriteString(c.Suit.String())
-		sb.WriteString(" ")
-		sb.WriteString(c.Rank.String())
-		sb.WriteString(" ")
-		if c.Playable {
-			sb.WriteString("✓")
-		} else {
-			sb.WriteString(" ")
-		}
-		sb.WriteString("]")
+		sb.WriteString(c.String())
 	}
 	return sb.String()
 }
