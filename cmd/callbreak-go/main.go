@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/prasantadh/callbreak-go/pkg/bot"
 	"github.com/prasantadh/callbreak-go/pkg/callbreak"
@@ -32,12 +33,11 @@ func main() {
 	}
 
 	// play the cards
-	fmt.Printf("The game:\n")
-	// for now just check by playing 5 tricks
 	for i := 0; i < callbreak.NTricks; i++ {
+
+		// // play the trick
 		trick := callbreak.Trick{}
 		for _, player := range bots {
-			fmt.Println(player.Hand)
 			c, _ := player.Play(trick)
 			trick.Cards = append(trick.Cards, c)
 			trick.Lead = trick.Cards[0]
@@ -47,9 +47,32 @@ func main() {
 				panic(msg)
 			}
 		}
-		for _, c := range trick.Cards {
-			fmt.Printf("%c %s   ", c.Suit, c.Rank)
+
+		// rendering.
+		// TODO trick cards leans in the direction of player who played it
+		// // upper half
+		fmt.Printf("-------%s-------\n", bots[2].Hand)
+		for i := 0; i < 6; i++ {
+			fmt.Printf("%s", bots[1].Hand[i].String())
+			fmt.Printf("%s", strings.Repeat(" ", 7*13))
+			fmt.Printf("%s\n", bots[3].Hand[i].String())
 		}
+		// // the trick
+		fmt.Printf("%s", bots[1].Hand[7].String())
+		fmt.Printf("%s", strings.Repeat(" ", 7*3))
+		for _, c := range trick.Cards {
+			// TODO: cards in tricks are being rendered as playable, they shouldn't
+			fmt.Printf("%s       ", c.String())
+		}
+		fmt.Printf("%s", strings.Repeat(" ", 7*2))
+		fmt.Printf("%s\n", bots[3].Hand[7].String())
+		// // lower half
+		for i := 7; i < 13; i++ {
+			fmt.Printf("%s", bots[1].Hand[i].String())
+			fmt.Printf("%s", strings.Repeat(" ", 7*13))
+			fmt.Printf("%s\n", bots[3].Hand[i].String())
+		}
+		fmt.Printf("-------%s-------\n", bots[0].Hand)
 		fmt.Println()
 		fmt.Println()
 	}
