@@ -11,9 +11,9 @@ const (
 type Hand []deck.Card
 
 type Trick struct {
-	Cards []deck.Card
-	Lead  deck.Card
-	Size  int
+	Cards [NPlayers]deck.Card
+	Lead  int // the card position that is 1st in this trick
+	Size  int // number of cards played so far in this trick
 }
 
 // a player must be able to take a card dealt in the game

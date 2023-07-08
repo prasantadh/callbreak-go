@@ -28,13 +28,13 @@ func (p *Player) Play(t callbreak.Trick) (deck.Card, error) {
 				return c, nil
 			}
 		}
-		msg := fmt.Errorf("No playable card left!")
+		msg := fmt.Errorf("no playable card left")
 		return deck.Card{}, msg
 	}
 
 	// if we have a card of the leading suit, play it
 	for i, card := range p.Hand {
-		if card.Suit == t.Lead.Suit &&
+		if card.Suit == t.Cards[t.Lead].Suit &&
 			card.Playable {
 			// TODO: sort the hand by rank so that we play the highest
 			// by default. IMP because if there is a winning card,
