@@ -46,33 +46,61 @@ func main() {
 				msg := fmt.Errorf("invalid move from a player")
 				panic(msg)
 			}
+			trick.Cards[len(trick.Cards)-1].Playable = false
+			// TODO: render here after each player plays
 		}
 
 		// rendering.
 		// TODO trick cards leans in the direction of player who played it
 		// // upper half
 		fmt.Printf("-------%s-------\n", bots[2].Hand)
-		for i := 0; i < 6; i++ {
-			fmt.Printf("%s", bots[1].Hand[i].String())
+		for i := 0; i < 4; i++ {
+			fmt.Printf("%s", bots[1].Hand[i])
 			fmt.Printf("%s", strings.Repeat(" ", 7*13))
-			fmt.Printf("%s\n", bots[3].Hand[i].String())
+			fmt.Printf("%s\n", bots[3].Hand[i])
 		}
-		// // the trick
-		fmt.Printf("%s", bots[1].Hand[7].String())
+
+		// top player
+		fmt.Printf("%s", bots[1].Hand[4])
+		fmt.Printf("%s", strings.Repeat(" ", 7*6))
+		fmt.Printf("%s", trick.Cards[2])
+		fmt.Printf("%s", strings.Repeat(" ", 7*6))
+		fmt.Printf("%s", bots[1].Hand[4])
+
+		// gap
+		fmt.Printf("%s", bots[1].Hand[5])
+		fmt.Printf("%s", strings.Repeat(" ", 7*13))
+		fmt.Printf("%s\n", bots[3].Hand[5])
+
+		// side players
+		fmt.Printf("%s", bots[1].Hand[6])
+		fmt.Printf("%s", strings.Repeat(" ", 7*4))
+		fmt.Printf("%s", trick.Cards[1])
 		fmt.Printf("%s", strings.Repeat(" ", 7*3))
-		for _, c := range trick.Cards {
-			// TODO: cards in tricks are being rendered as playable, they shouldn't
-			fmt.Printf("%s       ", c.String())
-		}
-		fmt.Printf("%s", strings.Repeat(" ", 7*2))
-		fmt.Printf("%s\n", bots[3].Hand[7].String())
-		// // lower half
-		for i := 7; i < 13; i++ {
-			fmt.Printf("%s", bots[1].Hand[i].String())
+		fmt.Printf("%s", trick.Cards[3])
+		fmt.Printf("%s", strings.Repeat(" ", 7*4))
+		fmt.Printf("%s", bots[1].Hand[6])
+
+		// gap
+		fmt.Printf("%s", bots[1].Hand[7])
+		fmt.Printf("%s", strings.Repeat(" ", 7*13))
+		fmt.Printf("%s\n", bots[3].Hand[7])
+
+		// bottom player
+		fmt.Printf("%s", bots[1].Hand[8])
+		fmt.Printf("%s", strings.Repeat(" ", 7*6))
+		fmt.Printf("%s", trick.Cards[0])
+		fmt.Printf("%s", strings.Repeat(" ", 7*6))
+		fmt.Printf("%s", bots[1].Hand[8])
+
+		// lower half
+		for i := 9; i < 13; i++ {
+			fmt.Printf("%s", bots[1].Hand[i])
 			fmt.Printf("%s", strings.Repeat(" ", 7*13))
-			fmt.Printf("%s\n", bots[3].Hand[i].String())
+			fmt.Printf("%s\n", bots[3].Hand[i])
 		}
 		fmt.Printf("-------%s-------\n", bots[0].Hand)
+
 		fmt.Println()
 		fmt.Println()
 	}
