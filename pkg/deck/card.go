@@ -8,7 +8,7 @@ type Card struct {
 	Playable bool
 }
 
-func (c *Card) String() string {
+func (c Card) String() string {
 	var sb strings.Builder
 	sb.WriteString("[")
 	sb.WriteString(c.Suit.String())
