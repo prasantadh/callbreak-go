@@ -1,6 +1,10 @@
 package callbreak
 
-import "github.com/prasantadh/callbreak-go/pkg/deck"
+import (
+	"fmt"
+
+	"github.com/prasantadh/callbreak-go/pkg/deck"
+)
 
 // returns index of the winning card of a trick
 // but only considers cards of a given suit
@@ -32,4 +36,13 @@ func (t Trick) Winner() int {
 	}
 	return t.SuitWinner(t.Cards[t.Lead].Suit)
 
+}
+
+func (t *Trick) Add(card deck.Card) error {
+	if t.Size == NPlayers {
+		return fmt.Errorf("trick already full")
+	}
+	t.Cards[(t.Lead+t.Size)%NPlayers] = card
+	t.Size += 1
+	return nil
 }
