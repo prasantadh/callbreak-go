@@ -7,6 +7,9 @@ import (
 	"github.com/prasantadh/callbreak-go/pkg/deck"
 )
 
+// TODO: see if it is better to provide a HandInterface
+// so players can have their own Sort() and String() function
+
 // sort by suit, Hukum -> itta -> chidi -> paan
 // for the same suit, sort by rank descending
 func (h *Hand) Sort() {
