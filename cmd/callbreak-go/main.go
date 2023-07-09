@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/prasantadh/callbreak-go/pkg/basicrenderer"
 	"github.com/prasantadh/callbreak-go/pkg/bot"
@@ -45,5 +46,6 @@ func main() {
 			panic(msg)
 		}
 		renderer.Render(game)
+		time.Sleep(time.Millisecond * 500)
 	}
 }
