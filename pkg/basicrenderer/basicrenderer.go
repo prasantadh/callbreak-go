@@ -1,10 +1,13 @@
 package basicrenderer
 
 import (
+	"fmt"
 	"strings"
 
 	"atomicgo.dev/cursor"
+	"github.com/fatih/color"
 	"github.com/prasantadh/callbreak-go/pkg/callbreak"
+	"github.com/prasantadh/callbreak-go/pkg/deck"
 )
 
 var (
@@ -15,6 +18,18 @@ var (
 	bottom = 0
 )
 
+var RedString func(a ...interface{}) string
+var BlackString func(a ...interface{}) string
+var BgWhiteString func(a ...interface{}) string
+var UnderlinedString func(a ...interface{}) string
+
+func init() {
+	RedString = color.New(color.BgWhite).Add(color.FgRed).SprintFunc()
+	BlackString = color.New(color.BgWhite).Add(color.FgBlack).SprintFunc()
+	BgWhiteString = color.New(color.BgWhite).Add(color.FgBlack).SprintFunc()
+	UnderlinedString = color.New(color.BgWhite).Add(color.Underline).SprintFunc()
+}
+
 type Renderer struct {
 	area cursor.Area
 }
@@ -23,6 +38,34 @@ func New() *Renderer {
 	return &Renderer{
 		area: cursor.NewArea(),
 	}
+}
+
+func blank(repetition int) string {
+	return BgWhiteString(strings.Repeat(" ", 7*repetition))
+}
+
+func ColoredCard(c deck.Card) string {
+	if c.Rank == 0 {
+		return blank(1)
+	}
+	s := fmt.Sprintf("[%s %s ", &c.Suit, &c.Rank)
+	if c.Playable {
+		s += "✓]"
+	} else {
+		s += " ]"
+	}
+	if c.Suit == deck.Hukum || c.Suit == deck.Chidi {
+		return BlackString(s)
+	}
+	return RedString(s)
+}
+
+func ColoredHand(h callbreak.Hand) string {
+	sb := strings.Builder{}
+	for _, c := range h {
+		sb.WriteString(ColoredCard(c))
+	}
+	return sb.String()
 }
 
 func (r *Renderer) Render(g *callbreak.CallBreak) {
@@ -36,45 +79,45 @@ func (r *Renderer) Render(g *callbreak.CallBreak) {
 
 	r.area.Clear()
 
-	s := []byte{}
+	sb := strings.Builder{}
 	addline := func(n int) {
-		s = append(s, hands[left][n].String()...)
-		s = append(s, strings.Repeat(" ", 7*4)...)
+		sb.WriteString(ColoredCard(hands[left][n]))
+		sb.WriteString(blank(4))
 		if n == 6 {
-			s = append(s, trick[left].String()...)
+			sb.WriteString(ColoredCard(trick[left]))
 		} else {
-			s = append(s, strings.Repeat(" ", 7)...)
+			sb.WriteString(blank(1))
 		}
-		s = append(s, strings.Repeat(" ", 7)...)
+		sb.WriteString(blank(1))
 		if n == 4 {
-			s = append(s, trick[top].String()...)
+			sb.WriteString(ColoredCard(trick[top]))
 		} else if n == 8 {
-			s = append(s, trick[bottom].String()...)
+			sb.WriteString(ColoredCard(trick[bottom]))
 		} else {
-			s = append(s, strings.Repeat(" ", 7)...)
+			sb.WriteString(blank(1))
 		}
-		s = append(s, strings.Repeat(" ", 7)...)
+		sb.WriteString(blank(1))
 		if n == 6 {
-			s = append(s, trick[right].String()...)
+			sb.WriteString(ColoredCard(trick[right]))
 		} else {
-			s = append(s, strings.Repeat(" ", 7)...)
+			sb.WriteString(blank(1))
 		}
-		s = append(s, strings.Repeat(" ", 7*4)...)
-		s = append(s, hands[right][n].String()...)
-		s = append(s, '\n')
+		sb.WriteString(blank(4))
+		sb.WriteString(ColoredCard(hands[right][n]))
+		sb.WriteString("\n")
 	}
 
-	s = append(s, strings.Repeat("-", 7)...)
-	s = append(s, hands[top].String()...)
-	s = append(s, strings.Repeat("-", 7)...)
-	s = append(s, '\n')
+	// corner := BgWhiteString(strings.Repeat("-", 7))
+	sb.WriteString(BgWhiteString("///////"))
+	sb.WriteString(ColoredHand(hands[top]))
+	sb.WriteString(BgWhiteString("\\\\\\\\\\\\\\"))
+	sb.WriteString("\n")
 	for i := 0; i < 13; i++ {
 		addline(i)
 	}
-	s = append(s, strings.Repeat("-", 7)...)
-	s = append(s, hands[bottom].String()...)
-	s = append(s, strings.Repeat("-", 7)...)
-	s = append(s, '\n')
-
-	r.area.Update(string(s))
+	sb.WriteString(BgWhiteString("\\\\\\\\\\\\\\"))
+	sb.WriteString(ColoredHand(hands[bottom]))
+	sb.WriteString(BgWhiteString("///////"))
+	sb.WriteString("\n")
+	r.area.Update(sb.String())
 }
