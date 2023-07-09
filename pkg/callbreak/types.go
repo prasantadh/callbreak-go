@@ -25,7 +25,10 @@ type PlayerInterface interface {
 
 type BotInterface PlayerInterface
 
+type score int
+
 type player struct {
 	hand Hand
 	PlayerInterface
+	Score score
 }

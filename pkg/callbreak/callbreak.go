@@ -62,8 +62,10 @@ func (g *CallBreak) GetHand(i int) Hand {
 func (g *CallBreak) Update() {
 	trick := &g.tricks[len(g.tricks)-1]
 	if trick.Size == NPlayers {
-		g.NextPlayer = trick.Winner()
-		g.tricks = append(g.tricks, Trick{Lead: g.NextPlayer})
+		winner := trick.Winner()
+		g.NextPlayer = winner
+		g.players[winner].Score += 1
+		g.tricks = append(g.tricks, Trick{Lead: winner})
 	}
 }
 
@@ -95,4 +97,12 @@ func (g *CallBreak) Play(c deck.Card) error {
 
 func (g *CallBreak) CurrentTrick() Trick {
 	return g.tricks[len(g.tricks)-1]
+}
+
+func (g *CallBreak) Score() []score {
+	scores := []score{}
+	for _, player := range g.players {
+		scores = append(scores, player.Score)
+	}
+	return scores
 }
