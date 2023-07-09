@@ -9,6 +9,9 @@ type Card struct {
 }
 
 func (c Card) String() string {
+	if c.Rank == 0 {
+		return "[-----]"
+	}
 	var sb strings.Builder
 	sb.WriteString("[")
 	sb.WriteString(c.Suit.String())
