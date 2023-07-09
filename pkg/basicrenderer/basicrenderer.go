@@ -20,14 +20,15 @@ var (
 
 var RedString func(a ...interface{}) string
 var BlackString func(a ...interface{}) string
+var FaintString func(a ...interface{}) string
 var BgWhiteString func(a ...interface{}) string
 var UnderlinedString func(a ...interface{}) string
 
 func init() {
 	RedString = color.New(color.BgWhite).Add(color.FgRed).SprintFunc()
+	FaintString = color.New(color.BgWhite).Add(color.Faint).SprintFunc()
 	BlackString = color.New(color.BgWhite).Add(color.FgBlack).SprintFunc()
 	BgWhiteString = color.New(color.BgWhite).Add(color.FgBlack).SprintFunc()
-	UnderlinedString = color.New(color.BgWhite).Add(color.Underline).SprintFunc()
 }
 
 type Renderer struct {
@@ -41,23 +42,24 @@ func New() *Renderer {
 }
 
 func blank(repetition int) string {
-	return BgWhiteString(strings.Repeat(" ", 7*repetition))
+	return BgWhiteString(strings.Repeat(" ", 6*repetition))
 }
 
 func ColoredCard(c deck.Card) string {
 	if c.Rank == 0 {
 		return blank(1)
 	}
-	s := fmt.Sprintf("[%s %s ", &c.Suit, &c.Rank)
-	if c.Playable {
-		s += "✓]"
-	} else {
-		s += " ]"
-	}
+	s := fmt.Sprintf("[%s %s ]", &c.Suit, &c.Rank)
 	if c.Suit == deck.Hukum || c.Suit == deck.Chidi {
-		return BlackString(s)
+		if c.Playable {
+			return BlackString(s)
+		}
+		return FaintString(BlackString(s))
 	}
-	return RedString(s)
+	if c.Playable {
+		return RedString(s)
+	}
+	return FaintString(RedString(s))
 }
 
 func ColoredHand(h callbreak.Hand) string {
@@ -76,6 +78,9 @@ func (r *Renderer) Render(g *callbreak.CallBreak) {
 		hands = append(hands, g.GetHand(i))
 	}
 	trick := g.CurrentTrick().Cards
+	for i := range trick { // little hack to make trick display bright
+		trick[i].Playable = true
+	}
 
 	r.area.Clear()
 
@@ -84,6 +89,7 @@ func (r *Renderer) Render(g *callbreak.CallBreak) {
 		sb.WriteString(ColoredCard(hands[left][n]))
 		sb.WriteString(blank(4))
 		if n == 6 {
+			// sb.WriteString(ColoredCard(trick[left]))
 			sb.WriteString(ColoredCard(trick[left]))
 		} else {
 			sb.WriteString(blank(1))
@@ -108,16 +114,16 @@ func (r *Renderer) Render(g *callbreak.CallBreak) {
 	}
 
 	// corner := BgWhiteString(strings.Repeat("-", 7))
-	sb.WriteString(BgWhiteString("///////"))
+	sb.WriteString(BgWhiteString("//////"))
 	sb.WriteString(ColoredHand(hands[top]))
-	sb.WriteString(BgWhiteString("\\\\\\\\\\\\\\"))
+	sb.WriteString(BgWhiteString("\\\\\\\\\\\\"))
 	sb.WriteString("\n")
 	for i := 0; i < 13; i++ {
 		addline(i)
 	}
 	sb.WriteString(BgWhiteString("\\\\\\\\\\\\\\"))
 	sb.WriteString(ColoredHand(hands[bottom]))
-	sb.WriteString(BgWhiteString("///////"))
+	sb.WriteString(BgWhiteString("/////"))
 	sb.WriteString("\n")
 	r.area.Update(sb.String())
 }
