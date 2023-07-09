@@ -29,6 +29,7 @@ func init() {
 	FaintString = color.New(color.BgWhite).Add(color.Faint).SprintFunc()
 	BlackString = color.New(color.BgWhite).Add(color.FgBlack).SprintFunc()
 	BgWhiteString = color.New(color.BgWhite).Add(color.FgBlack).SprintFunc()
+	UnderlinedString = color.New(color.Underline).SprintFunc()
 }
 
 type Renderer struct {
@@ -114,16 +115,16 @@ func (r *Renderer) Render(g *callbreak.CallBreak) {
 	}
 
 	// corner := BgWhiteString(strings.Repeat("-", 7))
-	sb.WriteString(BgWhiteString("//////"))
+	sb.WriteString(BgWhiteString("bot2⮕ "))
 	sb.WriteString(ColoredHand(hands[top]))
-	sb.WriteString(BgWhiteString("\\\\\\\\\\\\"))
+	sb.WriteString(BgWhiteString("⬇ bot3"))
 	sb.WriteString("\n")
 	for i := 0; i < 13; i++ {
 		addline(i)
 	}
-	sb.WriteString(BgWhiteString("\\\\\\\\\\\\\\"))
+	sb.WriteString(BgWhiteString("bot1⬆ "))
 	sb.WriteString(ColoredHand(hands[bottom]))
-	sb.WriteString(BgWhiteString("/////"))
+	sb.WriteString(BgWhiteString("⬅ bot0"))
 	sb.WriteString("\n")
 	r.area.Update(sb.String())
 }

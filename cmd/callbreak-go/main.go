@@ -48,4 +48,6 @@ func main() {
 		renderer.Render(game)
 		time.Sleep(time.Millisecond * 500)
 	}
+	game.Update()
+	renderer.Render(game)
 }

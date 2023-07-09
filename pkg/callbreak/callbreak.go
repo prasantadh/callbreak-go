@@ -62,10 +62,8 @@ func (g *CallBreak) GetHand(i int) Hand {
 func (g *CallBreak) Update() {
 	trick := &g.tricks[len(g.tricks)-1]
 	if trick.Size == NPlayers {
-		if len(g.tricks) < NTricks {
-			g.NextPlayer = trick.Winner()
-			g.tricks = append(g.tricks, Trick{Lead: g.NextPlayer})
-		}
+		g.NextPlayer = trick.Winner()
+		g.tricks = append(g.tricks, Trick{Lead: g.NextPlayer})
 	}
 }
 
