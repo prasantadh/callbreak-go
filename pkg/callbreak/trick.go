@@ -42,6 +42,7 @@ func (t *Trick) Add(card deck.Card) error {
 	if t.Size == NPlayers {
 		return fmt.Errorf("trick already full")
 	}
+	card.Playable = false
 	t.Cards[(t.Lead+t.Size)%NPlayers] = card
 	t.Size += 1
 	return nil
