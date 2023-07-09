@@ -114,7 +114,20 @@ func (r *Renderer) Render(g *callbreak.CallBreak) {
 		sb.WriteString("\n")
 	}
 
-	// corner := BgWhiteString(strings.Repeat("-", 7))
+	// the display content
+	sb.WriteString(BgWhiteString("ScoreBoard  "))
+	sb.WriteString(blank(13))
+	sb.WriteString("\n")
+	sb.WriteString(BgWhiteString("Bots:  | bot0 | bot1 | bot2 | bot3 |"))
+	sb.WriteString(blank(9))
+	sb.WriteString("\n")
+	sb.WriteString(blank(1))
+	sb.WriteString(BgWhiteString(" |"))
+	for _, score := range g.Score() {
+		sb.WriteString(BgWhiteString(fmt.Sprintf(" %2d/_ |", score)))
+	}
+	sb.WriteString(blank(9))
+	sb.WriteString(BgWhiteString("\n"))
 	sb.WriteString(BgWhiteString("bot2⮕ "))
 	sb.WriteString(ColoredHand(hands[top]))
 	sb.WriteString(BgWhiteString("⬇ bot3"))
