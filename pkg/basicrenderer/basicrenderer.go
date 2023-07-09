@@ -1,9 +1,9 @@
 package basicrenderer
 
 import (
-	"fmt"
 	"strings"
 
+	"atomicgo.dev/cursor"
 	"github.com/prasantadh/callbreak-go/pkg/callbreak"
 )
 
@@ -13,13 +13,16 @@ var (
 	top    = 2
 	right  = 3
 	bottom = 0
-	me     = 0
 )
 
-type Renderer struct{}
+type Renderer struct {
+	area cursor.Area
+}
 
 func New() *Renderer {
-	return &Renderer{}
+	return &Renderer{
+		area: cursor.NewArea(),
+	}
 }
 
 func (r *Renderer) Render(g *callbreak.CallBreak) {
@@ -31,55 +34,47 @@ func (r *Renderer) Render(g *callbreak.CallBreak) {
 	}
 	trick := g.CurrentTrick().Cards
 
-	// upper half
-	fmt.Printf("-------%s-------\n", hands[top])
-	for i := 0; i < 4; i++ {
-		fmt.Printf("%s", hands[left][i])
-		fmt.Printf("%s", strings.Repeat(" ", 7*13))
-		fmt.Printf("%s\n", hands[right][i])
+	r.area.Clear()
+
+	s := []byte{}
+	addline := func(n int) {
+		s = append(s, hands[left][n].String()...)
+		s = append(s, strings.Repeat(" ", 7*4)...)
+		if n == 6 {
+			s = append(s, trick[left].String()...)
+		} else {
+			s = append(s, strings.Repeat(" ", 7)...)
+		}
+		s = append(s, strings.Repeat(" ", 7)...)
+		if n == 4 {
+			s = append(s, trick[top].String()...)
+		} else if n == 8 {
+			s = append(s, trick[bottom].String()...)
+		} else {
+			s = append(s, strings.Repeat(" ", 7)...)
+		}
+		s = append(s, strings.Repeat(" ", 7)...)
+		if n == 6 {
+			s = append(s, trick[right].String()...)
+		} else {
+			s = append(s, strings.Repeat(" ", 7)...)
+		}
+		s = append(s, strings.Repeat(" ", 7*4)...)
+		s = append(s, hands[right][n].String()...)
+		s = append(s, '\n')
 	}
 
-	// top player card for the trick
-	fmt.Printf("%s", hands[left][4])
-	fmt.Printf("%s", strings.Repeat(" ", 7*6))
-	fmt.Printf("%s", trick[top])
-	fmt.Printf("%s", strings.Repeat(" ", 7*6))
-	fmt.Printf("%s\n", hands[right][4])
-
-	// gap
-	fmt.Printf("%s", hands[left][5])
-	fmt.Printf("%s", strings.Repeat(" ", 7*13))
-	fmt.Printf("%s\n", hands[right][5])
-
-	// left and right player card for the trick
-	fmt.Printf("%s", hands[left][6])
-	fmt.Printf("%s", strings.Repeat(" ", 7*4))
-	fmt.Printf("%s", trick[left])
-	fmt.Printf("%s", strings.Repeat(" ", 7*3))
-	fmt.Printf("%s", trick[right])
-	fmt.Printf("%s", strings.Repeat(" ", 7*4))
-	fmt.Printf("%s\n", hands[right][6])
-
-	// gap
-	fmt.Printf("%s", hands[left][7])
-	fmt.Printf("%s", strings.Repeat(" ", 7*13))
-	fmt.Printf("%s\n", hands[right][7])
-
-	// bottom player card for the trick
-	fmt.Printf("%s", hands[left][8])
-	fmt.Printf("%s", strings.Repeat(" ", 7*6))
-	fmt.Printf("%s", trick[0])
-	fmt.Printf("%s", strings.Repeat(" ", 7*6))
-	fmt.Printf("%s\n", hands[left][8])
-
-	// lower half
-	for i := 9; i < 13; i++ {
-		fmt.Printf("%s", hands[left][i])
-		fmt.Printf("%s", strings.Repeat(" ", 7*13))
-		fmt.Printf("%s\n", hands[right][i])
+	s = append(s, strings.Repeat("-", 7)...)
+	s = append(s, hands[top].String()...)
+	s = append(s, strings.Repeat("-", 7)...)
+	s = append(s, '\n')
+	for i := 0; i < 13; i++ {
+		addline(i)
 	}
-	fmt.Printf("-------%s-------\n", hands[0])
+	s = append(s, strings.Repeat("-", 7)...)
+	s = append(s, hands[bottom].String()...)
+	s = append(s, strings.Repeat("-", 7)...)
+	s = append(s, '\n')
 
-	fmt.Println()
-	fmt.Println()
+	r.area.Update(string(s))
 }
