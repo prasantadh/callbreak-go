@@ -75,6 +75,14 @@ func (g *CallBreak) Play(c deck.Card) error {
 
 	g.Update() // Critical to call this
 
+	// TODO: check for all possible errors first
+	// current trick must not be full
+	// nextPlayer must have the card
+	// nextPlayer must play current suit if in hand
+	// nextPlayer must play spade if current suit not in hand
+	// nextPlayer can play whatever if no space and no current suit in hand
+	// we should be able to eat up all subsequent errors after these checks
+
 	// the player plays the card
 	player := &g.players[g.NextPlayer]
 	err := player.Play(c)
