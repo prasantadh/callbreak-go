@@ -26,7 +26,7 @@ var UnderlinedString func(a ...interface{}) string
 
 func init() {
 	RedString = color.New(color.BgWhite).Add(color.FgRed).SprintFunc()
-	FaintString = color.New(color.BgWhite).Add(color.Faint).SprintFunc()
+	FaintString = color.New(color.Faint).Add(color.CrossedOut).SprintFunc()
 	BlackString = color.New(color.BgWhite).Add(color.FgBlack).SprintFunc()
 	BgWhiteString = color.New(color.BgWhite).Add(color.FgBlack).SprintFunc()
 	UnderlinedString = color.New(color.Underline).SprintFunc()
