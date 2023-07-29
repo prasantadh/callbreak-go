@@ -34,7 +34,8 @@ func (g *CallBreak) AddPlayer(p PlayerInterface) error {
 // TODO: auto trigger this action when round starts
 func (g *CallBreak) Deal() error {
 	if count := len(g.players); count != 4 {
-		msg := fmt.Errorf("wrong number of players: wanted %d got %d", NPlayers, count)
+		msg := fmt.Errorf("wrong number of players: wanted %d got %d",
+			NPlayers, count)
 		return msg
 	}
 
