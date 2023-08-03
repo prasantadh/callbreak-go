@@ -33,6 +33,14 @@ func runBot(cmd *cobra.Command, args []string) {
 
 	game := callbreak.New()
 	renderer := basicrenderer.New()
+	ticker := time.NewTicker(500 * time.Millisecond)
+
+	go func() {
+		for {
+			<-ticker.C
+			renderer.Render(game)
+		}
+	}()
 
 	// add the players
 	bots := [callbreak.NPlayers]*bot.Player{}
@@ -63,9 +71,7 @@ func runBot(cmd *cobra.Command, args []string) {
 			msg := fmt.Errorf("invalid move from a player: %v", err)
 			panic(msg)
 		}
-		renderer.Render(game)
 		time.Sleep(time.Millisecond * 500)
 	}
 	game.Update()
-	renderer.Render(game)
 }
