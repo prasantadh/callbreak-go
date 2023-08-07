@@ -8,16 +8,33 @@ import (
 )
 
 type CliBasicBot struct {
-	Name string
-	Hand callbreak.Hand
+	name  string
+	token callbreak.Token
+	Hand  callbreak.Hand
+}
+
+func (p *CliBasicBot) Name() string {
+	return p.name
+}
+
+func (p *CliBasicBot) SetName(name string) error {
+	return nil
+}
+
+func (p *CliBasicBot) Token() callbreak.Token {
+	return p.token
+}
+
+func (p *CliBasicBot) SetToken(token callbreak.Token) {
+	p.token = token
 }
 
 func (p *CliBasicBot) GetGameState() {
 	return
 }
 
-func (p *CliBasicBot) Play() (deck.Card, error) {
-
+func (p *CliBasicBot) Play(game callbreak.CallBreak) (deck.Card, error) {
+	t := game.GetState(p.token).Players[0].Rounds[0].Tricks[0]
 	// for an empty trick play the first playable card on hand
 	if count := len(t.Cards); count == 0 {
 		for i, c := range p.Hand {
@@ -69,9 +86,5 @@ func (p *CliBasicBot) Play() (deck.Card, error) {
 
 func (p *CliBasicBot) Take(c deck.Card) error {
 	p.Hand = append(p.Hand, c)
-	return nil
-}
-
-func (p *CliBasicBot) SetName(name string) error {
 	return nil
 }

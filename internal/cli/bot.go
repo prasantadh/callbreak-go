@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/prasantadh/callbreak-go/pkg/basicrenderer"
-	"github.com/prasantadh/callbreak-go/pkg/bot"
 	"github.com/prasantadh/callbreak-go/pkg/callbreak"
+	"github.com/prasantadh/callbreak-go/pkg/player"
 	"github.com/spf13/cobra"
 )
 
@@ -43,10 +43,10 @@ func runBot(cmd *cobra.Command, args []string) {
 	}()
 
 	// add the players
-	bots := [callbreak.NPlayers]*bot.Player{}
+	bots := [callbreak.NPlayers]player.Player{}
 	for i := 0; i < callbreak.NPlayers; i++ {
-		b := bot.New("bot" + fmt.Sprint(i))
-		err := game.AddPlayer(b)
+		b, _ := player.New("bot", "bot"+fmt.Sprint(i))
+		_, err := game.AddPlayer(b.Name())
 		if err != nil {
 			msg := fmt.Errorf("failed to setup game: %v", err)
 			panic(msg)
@@ -55,23 +55,25 @@ func runBot(cmd *cobra.Command, args []string) {
 	}
 
 	// deal a Deck of cards to players
-	game.Deal()
-	for i := range bots {
-		bots[i].Hand = game.GetHand(i)
-	}
+	// game.Deal()
+	// this is now done via get game state. probably there should be a way to
+	// get current player position via given token
+	// 	for i := range bots {
+	// 		bots[i].SetHand = game.GetState(bots[i].Token()).Players[i].Rounds[0].Hand
+	// 	}
 
 	// play the cards
 	for i := 0; i < callbreak.NCards; i++ {
-		game.Update()
-		trick := game.CurrentTrick()
-		player := bots[game.NextPlayer]
-		c, _ := player.Play(trick)
-		err := game.Play(c)
+		// game.Update()
+		// trick := game.CurrentTrick()
+		player := bots[game.GetState("0").Next]
+		c, _ := player.Play(*game)
+		err := game.Play(player.Token(), c)
 		if err != nil {
 			msg := fmt.Errorf("invalid move from a player: %v", err)
 			panic(msg)
 		}
 		time.Sleep(time.Millisecond * 500)
 	}
-	game.Update()
+	// game.Update()
 }

@@ -75,69 +75,72 @@ func (r *Renderer) Render(g *callbreak.CallBreak) {
 	// TODO: eventually only get one hand and display that
 	// for now display all hands
 	hands := []callbreak.Hand{}
+	fmt.Println(hands)
 	for i := 0; i < callbreak.NPlayers; i++ {
-		hands = append(hands, g.GetHand(i))
+		// hands = append(hands, g.GetHand(i))
 	}
-	trick := g.CurrentTrick().Cards
-	for i := range trick { // little hack to make trick display bright
-		trick[i].Playable = true
+	trick := g.GetState("0").Players[0].Rounds[0].Tricks[0]
+	for i := range trick.Cards { // little hack to make trick display bright
+		trick.Cards[i].Playable = true
 	}
 
 	r.area.Clear()
 
 	sb := strings.Builder{}
-	addline := func(n int) {
-		sb.WriteString(ColoredCard(hands[left][n]))
-		sb.WriteString(blank(4))
-		if n == 6 {
-			// sb.WriteString(ColoredCard(trick[left]))
-			sb.WriteString(ColoredCard(trick[left]))
-		} else {
+	/*
+		addline := func(n int) {
+			sb.WriteString(ColoredCard(hands[left][n]))
+			sb.WriteString(blank(4))
+			if n == 6 {
+				// sb.WriteString(ColoredCard(trick[left]))
+				sb.WriteString(ColoredCard(trick[left]))
+			} else {
+				sb.WriteString(blank(1))
+			}
 			sb.WriteString(blank(1))
-		}
-		sb.WriteString(blank(1))
-		if n == 4 {
-			sb.WriteString(ColoredCard(trick[top]))
-		} else if n == 8 {
-			sb.WriteString(ColoredCard(trick[bottom]))
-		} else {
+			if n == 4 {
+				sb.WriteString(ColoredCard(trick[top]))
+			} else if n == 8 {
+				sb.WriteString(ColoredCard(trick[bottom]))
+			} else {
+				sb.WriteString(blank(1))
+			}
 			sb.WriteString(blank(1))
+			if n == 6 {
+				sb.WriteString(ColoredCard(trick[right]))
+			} else {
+				sb.WriteString(blank(1))
+			}
+			sb.WriteString(blank(4))
+			sb.WriteString(ColoredCard(hands[right][n]))
+			sb.WriteString("\n")
 		}
-		sb.WriteString(blank(1))
-		if n == 6 {
-			sb.WriteString(ColoredCard(trick[right]))
-		} else {
-			sb.WriteString(blank(1))
-		}
-		sb.WriteString(blank(4))
-		sb.WriteString(ColoredCard(hands[right][n]))
-		sb.WriteString("\n")
-	}
 
-	// the display content
-	sb.WriteString(BgWhiteString("ScoreBoard  "))
-	sb.WriteString(blank(13))
-	sb.WriteString("\n")
-	sb.WriteString(BgWhiteString("Bots:  | bot0 | bot1 | bot2 | bot3 |"))
-	sb.WriteString(blank(9))
-	sb.WriteString("\n")
-	sb.WriteString(blank(1))
-	sb.WriteString(BgWhiteString(" |"))
-	for _, score := range g.Score() {
-		sb.WriteString(BgWhiteString(fmt.Sprintf(" %2d/_ |", score)))
-	}
-	sb.WriteString(blank(9))
-	sb.WriteString(BgWhiteString("\n"))
-	sb.WriteString(BgWhiteString("bot2⮕ "))
-	sb.WriteString(ColoredHand(hands[top]))
-	sb.WriteString(BgWhiteString("⬇ bot3"))
-	sb.WriteString("\n")
-	for i := 0; i < 13; i++ {
-		addline(i)
-	}
-	sb.WriteString(BgWhiteString("bot1⬆ "))
-	sb.WriteString(ColoredHand(hands[bottom]))
-	sb.WriteString(BgWhiteString("⬅ bot0"))
-	sb.WriteString("\n")
+		// the display content
+		sb.WriteString(BgWhiteString("ScoreBoard  "))
+		sb.WriteString(blank(13))
+		sb.WriteString("\n")
+		sb.WriteString(BgWhiteString("Bots:  | bot0 | bot1 | bot2 | bot3 |"))
+		sb.WriteString(blank(9))
+		sb.WriteString("\n")
+		sb.WriteString(blank(1))
+		sb.WriteString(BgWhiteString(" |"))
+		for _, score := range g.Score() {
+			sb.WriteString(BgWhiteString(fmt.Sprintf(" %2d/_ |", score)))
+		}
+		sb.WriteString(blank(9))
+		sb.WriteString(BgWhiteString("\n"))
+		sb.WriteString(BgWhiteString("bot2⮕ "))
+		sb.WriteString(ColoredHand(hands[top]))
+		sb.WriteString(BgWhiteString("⬇ bot3"))
+		sb.WriteString("\n")
+		for i := 0; i < 13; i++ {
+			addline(i)
+		}
+		sb.WriteString(BgWhiteString("bot1⬆ "))
+		sb.WriteString(ColoredHand(hands[bottom]))
+		sb.WriteString(BgWhiteString("⬅ bot0"))
+		sb.WriteString("\n")
+	*/
 	r.area.Update(sb.String())
 }

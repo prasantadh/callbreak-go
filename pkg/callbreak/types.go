@@ -58,6 +58,7 @@ type Game struct {
 			Tricks []Trick // tricks won by the player requesting data TODO authorize
 		}
 	}
+	Next int
 }
 
 type CallBreak struct {
@@ -78,9 +79,29 @@ type round struct {
 	calls  [NPlayers]Score
 	breaks [NPlayers]Score
 	hands  [NTricks]Hand
-	// there are 13 tricks in a round. each trick is indexed using player
+	// tricks are indexed [0,13). EACH trick is indexed using player
 	// ex. tricks[0] will have card played by [player0, ... , player3]
 	tricks []Trick
+}
+
+type current struct {
+	player *player
+	hand   *Hand
+	call   *Score
+	score  *Score
+	trick  *Trick
+	/*
+		trick        *Trick
+		player_index int
+		round_index  int
+		tricks_index int
+		player       *player
+		round        *round
+		trick        *Trick
+		hand         *Hand
+		calls        *Score
+		breaks       *Score
+	*/
 }
 
 type State int
