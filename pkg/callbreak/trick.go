@@ -47,3 +47,15 @@ func (t *Trick) Add(card deck.Card) error {
 	t.Size += 1
 	return nil
 }
+
+func (t *Trick) LeadCard() deck.Card {
+	return t.Cards[t.Lead]
+}
+
+func (t *Trick) LeadSuit() deck.Suit {
+	return t.LeadCard().Suit
+}
+
+func (t *Trick) LeadRank() deck.Rank {
+	return t.LeadCard().Rank
+}

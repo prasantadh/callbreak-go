@@ -1,6 +1,7 @@
 package callbreak
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -51,4 +52,25 @@ func (h Hand) String() string {
 		sb.WriteString(c.String())
 	}
 	return sb.String()
+}
+
+func (h Hand) HasPlayable(card deck.Card) bool {
+	for _, c := range h {
+		if c.Suit == card.Suit && c.Rank == card.Rank {
+			if c.Playable {
+				return true
+			}
+			return false
+		}
+	}
+	return false
+}
+
+func (h Hand) HasSuit(suit deck.Suit) bool {
+	for _, c := range h {
+		if c.Playable == true && c.Suit == suit {
+			return true
+		}
+	}
+	return false
 }
