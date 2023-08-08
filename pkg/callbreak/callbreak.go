@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/prasantadh/callbreak-go/pkg/deck"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/exp/slices"
 )
 
@@ -18,8 +19,8 @@ func (g *CallBreak) GetState(token Token) Game {
 			rounds = append(rounds, Round{
 				Call:   r.calls[i],
 				Break:  r.breaks[i],
-				Hand:   r.hands[i],
-				Tricks: r.tricks,
+				Hand:   append(Hand{}, r.hands[i]...),
+				Tricks: append([]Trick{}, r.tricks...),
 			})
 		}
 		response.Players = append(response.Players, Player{
@@ -64,17 +65,19 @@ func (g *CallBreak) AddPlayer(name string) (Token, error) {
 		return "", fmt.Errorf("couldn't add more players: table already full")
 	}
 
-	g.players = append(g.players, player{
+	p := player{
 		name: name,
 		// TODO implement more secure token mechanism
 		token: Token(fmt.Sprint(len(g.players))),
-	})
+	}
+	g.players = append(g.players, p)
 
 	if len(g.players) == NPlayers {
 		g.newRound()
 	}
 
-	return g.players[len(g.players)-1].token, nil
+	log.Infof("add player %s with token %s", p.name, p.token)
+	return p.token, nil
 }
 
 // deal the cards to the players
@@ -130,6 +133,7 @@ func (g *CallBreak) getValidMoves(curr *current) [][]deck.Card {
 	turupWinners := []deck.Card{}
 	playables := []deck.Card{}
 
+	log.Infof("current.Trick.Size: %d", curr.trick.Size)
 	if curr.trick.Size == 0 {
 		for _, c := range *curr.hand {
 			if c.Playable {
@@ -173,6 +177,7 @@ func (g *CallBreak) Play(token Token, card deck.Card) error {
 	//      players have been dealt the cards
 	//      players have made the calls
 	//      there is an active round and active trick
+	log.Infof("player %s attempted play with %s", token, card)
 
 	if g.state != CALLED {
 		return fmt.Errorf("invalid action at current game stage")
@@ -197,19 +202,27 @@ func (g *CallBreak) Play(token Token, card deck.Card) error {
 	}
 
 	validMoveSets := g.getValidMoves(curr)
+	log.Infof("valid move sets: %s", validMoveSets)
+	// todo should be able to refactor this into a function
 	for i, validMoveSet := range validMoveSets {
-		if len(validMoveSet) != 0 && !slices.Contains(validMoveSet, card) {
-			switch i {
-			//TODO update these ints with nicely named constants
-			case 0:
-				return fmt.Errorf("must play winning card of the leading suit")
-			case 1:
-				return fmt.Errorf("must play card of the leading suit")
-			case 2:
-				return fmt.Errorf("must play a Hukum card")
-			case 3:
-				return fmt.Errorf("must play a card in hand")
-			}
+		if len(validMoveSet) == 0 {
+			continue
+		}
+
+		if slices.Contains(validMoveSet, card) {
+			break
+		}
+
+		switch i {
+		//TODO update these ints with nicely named constants
+		case 0:
+			return fmt.Errorf("must play winning card of the leading suit")
+		case 1:
+			return fmt.Errorf("must play card of the leading suit")
+		case 2:
+			return fmt.Errorf("must play a Hukum card")
+		case 3:
+			return fmt.Errorf("must play a card in hand")
 		}
 	}
 
@@ -217,10 +230,11 @@ func (g *CallBreak) Play(token Token, card deck.Card) error {
 		if c.Suit == card.Suit && c.Rank == card.Rank {
 			(*curr.hand)[i].Playable = false
 			(*curr.trick).Add(card)
+			g.next = (g.next + 1) % NPlayers
 		}
 	}
 
-	if curr.trick.Size == NPlayers {
+	if curr.trick.Size == NPlayers { // update round + trick
 		if len(g.CurrentRound().tricks) < NTricks {
 			g.CurrentRound().tricks = append(g.CurrentRound().tricks, Trick{
 				Lead: curr.trick.Winner(),
@@ -229,6 +243,7 @@ func (g *CallBreak) Play(token Token, card deck.Card) error {
 			g.newRound()
 		}
 	}
+	log.Info("play successful!")
 
 	return nil
 }

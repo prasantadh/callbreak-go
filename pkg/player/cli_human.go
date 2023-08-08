@@ -14,20 +14,8 @@ func (p *CliHuman) Name() string {
 	return p.name
 }
 
-func (p *CliHuman) SetName(name string) error {
-	return nil
-}
-
 func (p *CliHuman) Token() callbreak.Token {
 	return p.token
-}
-
-func (p *CliHuman) SetToken(token callbreak.Token) {
-	p.token = token
-}
-
-func (p *CliHuman) GetGameState() {
-	return
 }
 
 func (p *CliHuman) Play(game *callbreak.CallBreak) (deck.Card, error) {

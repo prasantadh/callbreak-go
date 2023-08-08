@@ -1,6 +1,8 @@
 package callbreak
 
-import "github.com/prasantadh/callbreak-go/pkg/deck"
+import (
+	"github.com/prasantadh/callbreak-go/pkg/deck"
+)
 
 const (
 	NCards   = 52

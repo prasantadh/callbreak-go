@@ -3,7 +3,7 @@ package deck
 type Suit int
 
 const (
-	Hukum Suit = iota
+	Hukum Suit = 1 + iota // make 0 an invalid value
 	Chidi
 	Itta
 	Paan

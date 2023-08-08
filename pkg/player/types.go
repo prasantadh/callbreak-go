@@ -8,8 +8,6 @@ import (
 // a Player is expected to get the hand to Play from the game
 type Player interface {
 	Name() string
-	SetName(string) error
 	Token() callbreak.Token
-	SetToken(callbreak.Token)
 	Play(*callbreak.CallBreak) (deck.Card, error)
 }

@@ -1,11 +1,10 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
 
-	"github.com/prasantadh/callbreak-go/pkg/basicrenderer"
+	// "github.com/prasantadh/callbreak-go/pkg/basicrenderer"
 	"github.com/prasantadh/callbreak-go/pkg/callbreak"
 	"github.com/prasantadh/callbreak-go/pkg/player"
 	"github.com/spf13/cobra"
@@ -33,21 +32,24 @@ func init() {
 func runBot(cmd *cobra.Command, args []string) {
 
 	game := callbreak.New()
-	renderer := basicrenderer.New()
+	// renderer := basicrenderer.New()
 	ticker := time.NewTicker(500 * time.Millisecond)
 
 	go func() {
 		for {
 			<-ticker.C
-			renderer.Render(game)
+			// todo looks like renderer isn't working
+			// one possible issue is the logger takes stdout
+			// renderer.Render(game)
 		}
 	}()
 
 	// add the players
 	bots := [callbreak.NPlayers]player.Player{}
 	for i := 0; i < callbreak.NPlayers; i++ {
-		b, _ := player.New("bot", "bot"+fmt.Sprint(i))
-		_, err := game.AddPlayer(b.Name())
+		name := "bot" + fmt.Sprint(i)
+		token, err := game.AddPlayer(name)
+		b, _ := player.New("bot", name, token)
 		if err != nil {
 			msg := fmt.Errorf("failed to setup game: %v", err)
 			panic(msg)
@@ -55,17 +57,8 @@ func runBot(cmd *cobra.Command, args []string) {
 		bots[i] = b
 	}
 
-	r, err := json.Marshal(game.GetState("0"))
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(string(r))
-
 	// play the cards
 	for i := 0; i < callbreak.NCards; i++ {
-		// game.Update()
-		// trick := game.CurrentTrick()
-		fmt.Printf("card %d\n", i)
 		player := bots[game.GetState("0").Next]
 		c, _ := player.Play(game)
 		err := game.Play(player.Token(), c)
@@ -75,5 +68,4 @@ func runBot(cmd *cobra.Command, args []string) {
 		}
 		time.Sleep(time.Millisecond * 500)
 	}
-	// game.Update()
 }
