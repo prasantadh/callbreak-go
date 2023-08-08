@@ -28,6 +28,12 @@ func (g *CallBreak) GetState(token Token) Game {
 			Rounds: rounds,
 		})
 		response.Next = g.next
+		trick := g.CurrentTrick()
+		response.Trick = Trick{
+			Cards: append([]deck.Card{}, trick.Cards...),
+			Lead:  trick.Lead,
+			Size:  trick.Size,
+		}
 	}
 	return response
 }
@@ -236,6 +242,8 @@ func (g *CallBreak) Play(token Token, card deck.Card) error {
 
 	if curr.trick.Size == NPlayers { // update round + trick
 		if len(g.CurrentRound().tricks) < NTricks {
+			winner := g.CurrentTrick().Winner()
+			g.CurrentRound().breaks[winner] += 1
 			g.CurrentRound().tricks = append(g.CurrentRound().tricks, Trick{
 				Lead: curr.trick.Winner(),
 			})
@@ -248,6 +256,8 @@ func (g *CallBreak) Play(token Token, card deck.Card) error {
 	return nil
 }
 
+// todo: the following functions are being exported
+// think about not-exporting them
 func (g *CallBreak) CurrentRound() *round {
 	if len(g.rounds) == 0 {
 		return nil

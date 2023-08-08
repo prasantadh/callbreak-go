@@ -14,7 +14,7 @@ const (
 type Hand []deck.Card
 
 type Trick struct {
-	Cards [NPlayers]deck.Card
+	Cards []deck.Card
 	Lead  int // the card position that is 1st in this trick
 	Size  int // number of cards played so far in this trick
 }
@@ -35,6 +35,7 @@ type Game struct {
 	// player-first information like rendering tricks of current player
 	Players []Player `json:"players"`
 	Next    int      `json:"next"`
+	Trick   Trick    `json:"trick"`
 }
 
 // information available to a player

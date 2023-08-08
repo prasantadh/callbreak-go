@@ -51,6 +51,7 @@ func runBot(cmd *cobra.Command, args []string) {
 		name := "bot" + fmt.Sprint(i)
 		token, err := game.AddPlayer(name)
 		b, _ := player.New("bot", name, token)
+		renderer.SetToken(token)
 		if err != nil {
 			msg := fmt.Errorf("failed to setup game: %v", err)
 			panic(msg)
