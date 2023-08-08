@@ -30,6 +30,6 @@ func (p *CliHuman) GetGameState() {
 	return
 }
 
-func (p *CliHuman) Play(game callbreak.CallBreak) (deck.Card, error) {
+func (p *CliHuman) Play(game *callbreak.CallBreak) (deck.Card, error) {
 	return deck.Card{}, nil
 }

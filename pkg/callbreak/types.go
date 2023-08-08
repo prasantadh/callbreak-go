@@ -17,48 +17,37 @@ type Trick struct {
 	Size  int // number of cards played so far in this trick
 }
 
-// a player must be able to take a card dealt in the game
-// and be able to play a card when it's their turn
-type PlayerInterface interface {
-	Play(Trick) (deck.Card, error)
-	Take(deck.Card) error
-}
-
-type BotInterface PlayerInterface
-
 type Score int
 
 type Token string
-
-// type CallBreak struct { // a game is
-// players    []player // between 4 players
-// deck.Deck           // with a standard deck of cards
-// tricks     []Trick  // and is played as a collection of Tricks
-// NextPlayer int
-// }
-
-// Game holds the data for :TODO an authoized player.
-// in terms of data organization, there is a conflict on spatial locality.
-// [Rounds][Player] would offer more spatial locality when accessing
-// round-first information like a scoreboard
-// [Player][Round] would offer more spatial locality when accessing
-// player-first information like rendering tricks of current player
 
 // the data that should be visible to anyone playing the game
 // the players are in the order of who started the first round
 // each trick also has cards in the same order
 // TODO: check autorization before sending results
 type Game struct {
-	Players []struct {
-		Name   string `json:"name"`
-		Rounds []struct {
-			Call   Score   // Call made by the player at the beginning of round
-			Break  Score   // Number of tricks won by the player this round
-			Hand           // Hand of the player TODO: empty if not authoized
-			Tricks []Trick // tricks won by the player requesting data TODO authorize
-		}
-	}
-	Next int
+	// in terms of data organization, there is a conflict on spatial locality.
+	// [Rounds][Player] would offer more spatial locality when accessing
+	// round-first information like a scoreboard
+	// [Player][Round] would offer more spatial locality when accessing
+	// player-first information like rendering tricks of current player
+	Players []Player `json:"players"`
+	Next    int      `json:"next"`
+}
+
+// information available to a player
+type Player struct {
+	Name   string  `json:"name"`
+	Rounds []Round `json:"rounds"`
+}
+
+// information about a round available to a player
+// Tricks only holds the tricks that are won by this player
+type Round struct {
+	Call   Score `json:"call"`
+	Break  Score `json:"score"`
+	Hand   `json:"hand"`
+	Tricks []Trick `json:"tricks"`
 }
 
 type CallBreak struct {
@@ -66,6 +55,7 @@ type CallBreak struct {
 	players []player
 	rounds  []round
 	next    int // player that goes next
+	state   State
 }
 
 type player struct {
@@ -90,24 +80,14 @@ type current struct {
 	call   *Score
 	score  *Score
 	trick  *Trick
-	/*
-		trick        *Trick
-		player_index int
-		round_index  int
-		tricks_index int
-		player       *player
-		round        *round
-		trick        *Trick
-		hand         *Hand
-		calls        *Score
-		breaks       *Score
-	*/
 }
 
+// track the current state of the game
 type State int
 
 const (
-	NOT_DEALT = iota
+	NOTREADY State = iota
+	DEALT
+	CALLED
+	DONE
 )
-
-var States [1]State = [...]State{NOT_DEALT}

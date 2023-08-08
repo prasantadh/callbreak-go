@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -54,20 +55,19 @@ func runBot(cmd *cobra.Command, args []string) {
 		bots[i] = b
 	}
 
-	// deal a Deck of cards to players
-	// game.Deal()
-	// this is now done via get game state. probably there should be a way to
-	// get current player position via given token
-	// 	for i := range bots {
-	// 		bots[i].SetHand = game.GetState(bots[i].Token()).Players[i].Rounds[0].Hand
-	// 	}
+	r, err := json.Marshal(game.GetState("0"))
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(r))
 
 	// play the cards
 	for i := 0; i < callbreak.NCards; i++ {
 		// game.Update()
 		// trick := game.CurrentTrick()
+		fmt.Printf("card %d\n", i)
 		player := bots[game.GetState("0").Next]
-		c, _ := player.Play(*game)
+		c, _ := player.Play(game)
 		err := game.Play(player.Token(), c)
 		if err != nil {
 			msg := fmt.Errorf("invalid move from a player: %v", err)

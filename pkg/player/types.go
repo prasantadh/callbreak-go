@@ -11,5 +11,5 @@ type Player interface {
 	SetName(string) error
 	Token() callbreak.Token
 	SetToken(callbreak.Token)
-	Play(callbreak.CallBreak) (deck.Card, error)
+	Play(*callbreak.CallBreak) (deck.Card, error)
 }

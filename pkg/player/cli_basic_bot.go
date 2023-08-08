@@ -33,7 +33,8 @@ func (p *CliBasicBot) GetGameState() {
 	return
 }
 
-func (p *CliBasicBot) Play(game callbreak.CallBreak) (deck.Card, error) {
+func (p *CliBasicBot) Play(game *callbreak.CallBreak) (deck.Card, error) {
+	fmt.Println(game.GetState(p.token))
 	t := game.GetState(p.token).Players[0].Rounds[0].Tricks[0]
 	// for an empty trick play the first playable card on hand
 	if count := len(t.Cards); count == 0 {
