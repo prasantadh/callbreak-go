@@ -5,6 +5,7 @@ import (
 	"time"
 
 	// "github.com/prasantadh/callbreak-go/pkg/basicrenderer"
+	"github.com/prasantadh/callbreak-go/pkg/basicrenderer"
 	"github.com/prasantadh/callbreak-go/pkg/callbreak"
 	"github.com/prasantadh/callbreak-go/pkg/player"
 	"github.com/spf13/cobra"
@@ -32,7 +33,7 @@ func init() {
 func runBot(cmd *cobra.Command, args []string) {
 
 	game := callbreak.New()
-	// renderer := basicrenderer.New()
+	renderer := basicrenderer.New()
 	ticker := time.NewTicker(500 * time.Millisecond)
 
 	go func() {
@@ -40,7 +41,7 @@ func runBot(cmd *cobra.Command, args []string) {
 			<-ticker.C
 			// todo looks like renderer isn't working
 			// one possible issue is the logger takes stdout
-			// renderer.Render(game)
+			renderer.Render(game)
 		}
 	}()
 
