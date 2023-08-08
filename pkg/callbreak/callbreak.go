@@ -8,140 +8,110 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-func (g *CallBreak) GetState(token Token) Game {
-	// if token matches game token return everything
+func (g *CallBreak) Query(token Token) (*CallBreak, error) {
+	// TODO if token matches game token return everything
 	// if token matches a player token, blur out other players
 	// if token isn't a match return error
-	response := Game{}
-	for i, p := range g.players {
-		rounds := []Round{}
-		for _, r := range g.rounds {
-			rounds = append(rounds, Round{
-				Call:   r.calls[i],
-				Break:  r.breaks[i],
-				Hand:   append(Hand{}, r.hands[i]...),
-				Tricks: append([]Trick{}, r.tricks...),
-			})
-		}
-		response.Players = append(response.Players, Player{
-			Name:   p.name,
-			Rounds: rounds,
-		})
-		response.Next = g.next
-		trick := g.CurrentTrick()
-		response.Trick = Trick{
-			Cards: append([]deck.Card{}, trick.Cards...),
-			Lead:  trick.Lead,
-			Size:  trick.Size,
+
+	// find the current player requesting data
+	current := -1
+	for current = range g.Players {
+		if g.Players[current].token == token {
+			break
 		}
 	}
-	return response
+	if current == -1 {
+		return nil, fmt.Errorf("invalid token")
+	}
+
+	// construct the response for this player
+	response := g
+	for i := range g.Players {
+		if i != current {
+			response.Players[i].token = ""
+		}
+	}
+
+	for r, round := range g.Rounds {
+		for t, trick := range round.Tricks {
+			if trick.Winner() != current {
+				response.Rounds[r].Tricks[t] = Trick{}
+			}
+		}
+		for hand := range round.Hands {
+			if hand != current {
+				response.Rounds[r].Hands[hand] = Hand{}
+			}
+		}
+	}
+
+	return response, nil
+
 }
 
 func New() *CallBreak {
 	return &CallBreak{}
 }
 
-func (g *CallBreak) newRound() error {
-
-	if len(g.rounds) >= NRounds {
-		return fmt.Errorf("no more rounds left to play in the game")
-	}
-
-	if r := g.CurrentRound(); r != nil && len(r.tricks) < NTricks {
-		return fmt.Errorf("more tricks left to play in this round")
-	}
-
-	if t := g.CurrentTrick(); t != nil && t.Size < NPlayers {
-		return fmt.Errorf("current trick not full, players remaining")
-	}
-
-	g.next = len(g.rounds) % NRounds
-	g.rounds = append(g.rounds, round{tricks: make([]Trick, 1)})
-	g.CurrentRound().deal()
-	// TODO: implement CALLED
-	g.state = CALLED
-	return nil
-}
-
 // add a player to the game. returns an authentication token on success
 // else return error on failure
-func (g *CallBreak) AddPlayer(name string) (Token, error) {
-	if len(g.players) == NPlayers {
+func (game *CallBreak) AddPlayer(name string) (Token, error) {
+	if game.TotalPlayers == NPlayers {
 		return "", fmt.Errorf("couldn't add more players: table already full")
 	}
 
-	p := player{
-		name: name,
-		// TODO implement more secure token mechanism
-		token: Token(fmt.Sprint(len(g.players))),
-	}
-	g.players = append(g.players, p)
+	player := &game.Players[game.TotalPlayers]
+	player.Name = name
+	//TODO implement more secure token mechanism
+	player.token = Token(fmt.Sprint(game.TotalPlayers))
+	game.TotalPlayers += 1
 
-	if len(g.players) == NPlayers {
-		g.newRound()
+	if game.TotalPlayers == NPlayers {
+		game.Rounds[game.RoundNumber].deal()
+		// TODO: implement called
+		game.Stage = CALLED
 	}
 
-	log.Infof("add player %s with token %s", p.name, p.token)
-	return p.token, nil
+	log.Infof("add player %s with token %s", player.Name, player.token)
+	return player.token, nil
 }
 
 // deal the cards to the players
 // each player can now make a call to GetHand
 // TODO: auto trigger this action when round starts
-func (r *round) deal() {
+func (round *Round) deal() {
 
 	d := deck.New()
 	// TODO: make sure each player is dealt at least one Hukum
 	// and at least one of Q, K, A else shuffle again
-	for i, c := range d {
-		p := i % NPlayers
-		r.hands[p] = append(r.hands[p], c)
+	round.TrickNumber = 0
+	for i, card := range d {
+		player := i % NPlayers
+		round.Hands[player][round.TrickNumber] = card
+	}
+	round.TrickNumber = 0
+
+	for i := range round.Hands {
+		round.Hands[i].Sort()
 	}
 
-	for i := range r.hands {
-		r.hands[i].Sort()
-	}
-
-}
-
-// updates the data structure curr of type current
-// returns error when called without a valid game state for play
-func (g *CallBreak) updateCurrent(curr *current, token Token) error {
-	round := g.CurrentRound()
-
-	// current player
-	curr.player = nil
-	for i, p := range g.players {
-		if p.token == token {
-			curr.player = &g.players[i]
-			curr.hand = &round.hands[i]
-			curr.call = &round.calls[i]
-			curr.score = &round.breaks[i]
-			curr.trick = g.CurrentTrick()
-			return nil
-		}
-	}
-	if curr.player == nil {
-		return fmt.Errorf("invalid token")
-	}
-
-	return nil
 }
 
 // return sets of cards that are valid moves for current trick
 // if two sets at i and j > i are non-empty,
 // the played card must be in set at i
-func (g *CallBreak) getValidMoves(curr *current) [][]deck.Card {
+func (round *Round) getValidMoves(player int) [][]deck.Card {
 
 	leadSuitWinners := []deck.Card{}
 	leadSuit := []deck.Card{}
 	turupWinners := []deck.Card{}
 	playables := []deck.Card{}
 
-	log.Infof("current.Trick.Size: %d", curr.trick.Size)
-	if curr.trick.Size == 0 {
-		for _, c := range *curr.hand {
+	trick := round.Tricks[round.TrickNumber-1]
+	hand := round.Hands[player]
+
+	if trick.Size == 0 {
+		for _, c := range hand {
 			if c.Playable {
 				playables = append(playables, c)
 			}
@@ -149,10 +119,10 @@ func (g *CallBreak) getValidMoves(curr *current) [][]deck.Card {
 		return [][]deck.Card{leadSuitWinners, leadSuit, turupWinners, playables}
 	}
 
-	winner := curr.trick.Cards[curr.trick.Winner()]
-	leader := curr.trick.Cards[curr.trick.Lead]
+	winner := trick.Cards[trick.Winner()]
+	leader := trick.Cards[trick.Lead]
 
-	for _, c := range *curr.hand {
+	for _, c := range hand {
 		if !c.Playable {
 			continue
 		}
@@ -175,7 +145,8 @@ func (g *CallBreak) getValidMoves(curr *current) [][]deck.Card {
 
 // the next player in line playes the card c
 // TODO: authorize the player for this action
-func (g *CallBreak) Play(token Token, card deck.Card) error {
+func (game *CallBreak) Play(token Token, card deck.Card) error {
+	// assert there is an active round and active trick to play on
 	// assert players are dealt the card and have made the calls
 	// assert only one player can be going through this path at a time
 	// if operating asynchronously
@@ -185,31 +156,35 @@ func (g *CallBreak) Play(token Token, card deck.Card) error {
 	//      there is an active round and active trick
 	log.Infof("player %s attempted play with %s", token, card)
 
-	if g.state != CALLED {
-		return fmt.Errorf("invalid action at current game stage")
+	player := -1
+	for i, p := range game.Players {
+		if p.token == token {
+			player = i
+			break
+		}
+	}
+	if player == -1 {
+		return fmt.Errorf("cannot play: invalid token")
 	}
 
-	curr := &current{}
-	err := g.updateCurrent(curr, token)
-	if err != nil {
-		return fmt.Errorf("cannot play: %v", err)
-	}
-
-	if g.state != CALLED {
+	if game.Stage != CALLED {
 		return fmt.Errorf("cannot play: not all players have called")
 	}
 
-	if *curr.player != g.players[g.next] {
+	round := &game.Rounds[game.RoundNumber-1]
+	trick := &round.Tricks[round.TrickNumber-1]
+	next := (trick.Lead + trick.Size) % NPlayers
+	if player != next {
 		return fmt.Errorf("you are not up next")
 	}
 
-	if curr.trick.Size >= NPlayers {
+	if game.RoundNumber == NRounds {
 		return fmt.Errorf("no active trick to play on")
 	}
 
-	validMoveSets := g.getValidMoves(curr)
+	validMoveSets := round.getValidMoves(player)
 	log.Infof("valid move sets: %s", validMoveSets)
-	// todo should be able to refactor this into a function
+	// TODO should be able to refactor this into a function
 	for i, validMoveSet := range validMoveSets {
 		if len(validMoveSet) == 0 {
 			continue
@@ -232,47 +207,29 @@ func (g *CallBreak) Play(token Token, card deck.Card) error {
 		}
 	}
 
-	for i, c := range *curr.hand { // play the card
+	hand := &round.Hands[player]
+	for i, c := range hand { // play the card
 		if c.Suit == card.Suit && c.Rank == card.Rank {
-			(*curr.hand)[i].Playable = false
-			(*curr.trick).Add(card)
-			g.next = (g.next + 1) % NPlayers
+			hand[i].Playable = false
+			round.Tricks[round.TrickNumber-1].Add(card)
+			break
 		}
 	}
 
-	if curr.trick.Size == NPlayers { // update round + trick
-		if len(g.CurrentRound().tricks) < NTricks {
-			winner := g.CurrentTrick().Winner()
-			g.CurrentRound().breaks[winner] += 1
-			g.CurrentRound().tricks = append(g.CurrentRound().tricks, Trick{
-				Lead: curr.trick.Winner(),
-			})
-		} else {
-			g.newRound()
+	if trick.Size == NPlayers { // update results
+		winner := trick.Winner()
+		round.Breaks[winner] += 1
+		round.TrickNumber += 1
+		if round.TrickNumber < NTricks {
+			round.Tricks[round.TrickNumber].Lead = winner
 		}
 	}
-	log.Info("play successful!")
+
+	// next round
+	if game.RoundNumber < NRounds && round.TrickNumber == NTricks {
+		game.RoundNumber += 1
+		game.Rounds[game.RoundNumber].deal()
+	}
 
 	return nil
-}
-
-// todo: the following functions are being exported
-// think about not-exporting them
-func (g *CallBreak) CurrentRound() *round {
-	if len(g.rounds) == 0 {
-		return nil
-	}
-	return &g.rounds[len(g.rounds)-1]
-}
-
-func (g *CallBreak) CurrentTrick() *Trick {
-	round := g.CurrentRound()
-	if round == nil {
-		return nil
-	}
-
-	if len(round.tricks) == 0 {
-		return nil
-	}
-	return &round.tricks[len(round.tricks)-1]
 }
