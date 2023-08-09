@@ -21,6 +21,7 @@ type CallBreak struct {
 	TotalPlayers int // number of players currently in the game
 	RoundNumber  int // current round number
 	// TotalPlayers and RoundNumber might be better as names
+	workPermit chan struct{}
 }
 
 type Player struct {
@@ -44,7 +45,7 @@ type Score int
 type Hand [NTricks]deck.Card
 
 type Trick struct {
-	Cards [NTricks]deck.Card
+	Cards [NPlayers]deck.Card
 	Lead  int // the card position that is 1st in this trick
 	Size  int // number of cards played so far in this trick
 }
