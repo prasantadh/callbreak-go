@@ -10,19 +10,17 @@ import (
 // but only considers cards of a given suit
 // -1 if no card of the suit exist
 func (t Trick) SuitWinner(suit deck.Suit) int {
-	winner := struct {
-		deck.Card
-		index int
-	}{Card: deck.Card{Suit: suit, Rank: 0}, index: -1}
+	winner := deck.Card{}
+	ans := -1
 
 	for i := 0; i < NPlayers; i++ {
 		this := t.Cards[i]
-		if this.Suit == suit && this.Rank > winner.Card.Rank {
-			winner.Card = this
-			winner.index = i
+		if this.Suit == suit && this.Rank > winner.Rank {
+			winner = this
+			ans = i
 		}
 	}
-	return winner.index
+	return ans
 }
 
 // returns the index of the winning card in a given trick
@@ -34,7 +32,7 @@ func (t Trick) Winner() int {
 			return t.SuitWinner(deck.Hukum)
 		}
 	}
-	return t.SuitWinner(t.Cards[t.Lead].Suit)
+	return t.SuitWinner(t.LeadSuit())
 
 }
 
@@ -46,4 +44,16 @@ func (t *Trick) Add(card deck.Card) error {
 	t.Cards[(t.Lead+t.Size)%NPlayers] = card
 	t.Size += 1
 	return nil
+}
+
+func (t *Trick) LeadCard() deck.Card {
+	return t.Cards[t.Lead]
+}
+
+func (t *Trick) LeadSuit() deck.Suit {
+	return t.LeadCard().Suit
+}
+
+func (t *Trick) LeadRank() deck.Rank {
+	return t.LeadCard().Rank
 }

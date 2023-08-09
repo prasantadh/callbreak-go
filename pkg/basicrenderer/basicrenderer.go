@@ -33,13 +33,18 @@ func init() {
 }
 
 type Renderer struct {
-	area cursor.Area
+	area  cursor.Area
+	token callbreak.Token
 }
 
 func New() *Renderer {
 	return &Renderer{
 		area: cursor.NewArea(),
 	}
+}
+
+func (r *Renderer) SetToken(token callbreak.Token) {
+	r.token = token
 }
 
 func blank(repetition int) string {
@@ -72,14 +77,19 @@ func ColoredHand(h callbreak.Hand) string {
 }
 
 func (r *Renderer) Render(g *callbreak.CallBreak) {
+	if r.token == "" {
+		fmt.Println("token not yet set!")
+		return
+	}
+
 	// TODO: eventually only get one hand and display that
 	// for now display all hands
-	hands := []callbreak.Hand{}
-	for i := 0; i < callbreak.NPlayers; i++ {
-		hands = append(hands, g.GetHand(i))
-	}
-	trick := g.CurrentTrick().Cards
-	for i := range trick { // little hack to make trick display bright
+	state, _ := g.Query(r.token)
+	round := state.Rounds[state.RoundNumber]
+	hands := round.Hands
+	trick := round.Tricks[round.TrickNumber].Cards
+
+	for i := range trick { // little hack to make trick not-CrossedOut
 		trick[i].Playable = true
 	}
 
@@ -123,9 +133,11 @@ func (r *Renderer) Render(g *callbreak.CallBreak) {
 	sb.WriteString("\n")
 	sb.WriteString(blank(1))
 	sb.WriteString(BgWhiteString(" |"))
-	for _, score := range g.Score() {
+	// printing the scoreboard values
+	for _, score := range round.Breaks {
 		sb.WriteString(BgWhiteString(fmt.Sprintf(" %2d/_ |", score)))
 	}
+	// the game board
 	sb.WriteString(blank(9))
 	sb.WriteString(BgWhiteString("\n"))
 	sb.WriteString(BgWhiteString("bot2⮕ "))

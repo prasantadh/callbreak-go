@@ -13,9 +13,9 @@ import (
 // sort by suit, Hukum -> itta -> chidi -> paan
 // for the same suit, sort by rank descending
 func (h *Hand) Sort() {
-	sort.Slice(*h, func(i, j int) bool {
-		this := (*h)[i]
-		other := (*h)[j]
+	sort.Slice(h[:], func(i, j int) bool {
+		this := h[i]
+		other := h[j]
 		if this.Suit == other.Suit {
 			return this.Rank > other.Rank
 		}
@@ -51,4 +51,25 @@ func (h Hand) String() string {
 		sb.WriteString(c.String())
 	}
 	return sb.String()
+}
+
+func (h Hand) HasPlayable(card deck.Card) bool {
+	for _, c := range h {
+		if c.Suit == card.Suit && c.Rank == card.Rank {
+			if c.Playable {
+				return true
+			}
+			return false
+		}
+	}
+	return false
+}
+
+func (h Hand) HasSuit(suit deck.Suit) bool {
+	for _, c := range h {
+		if c.Playable == true && c.Suit == suit {
+			return true
+		}
+	}
+	return false
 }

@@ -4,114 +4,261 @@ import (
 	"fmt"
 
 	"github.com/prasantadh/callbreak-go/pkg/deck"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/exp/slices"
 )
 
-type CallBreak struct { // a game is
-	players    []player // between 4 players
-	deck.Deck           // with a standard deck of cards
-	tricks     []Trick  // and is played as a collection of Tricks
-	NextPlayer int
+func (g *CallBreak) Query(token Token) (*CallBreak, error) {
+
+	g.workPermit <- struct{}{}
+	defer func() { <-g.workPermit }()
+
+	// TODO if token matches game token return everything
+	// if token matches a player token, blur out other players
+	// if token isn't a match return error
+
+	// find the current player requesting data
+	current := -1
+	for current = range g.Players {
+		if g.Players[current].token == token {
+			break
+		}
+	}
+	if current == -1 {
+		return nil, fmt.Errorf("invalid token")
+	}
+
+	// construct the response for this player
+	response := *g
+	for i := range g.Players {
+		if i != current {
+			response.Players[i].token = ""
+		}
+	}
+
+	for r, round := range g.Rounds {
+		for hand := range round.Hands {
+			if hand != current {
+				response.Rounds[r].Hands[hand] = Hand{}
+			}
+		}
+	}
+
+	return &response, nil
+
 }
 
 func New() *CallBreak {
 	return &CallBreak{
-		tricks: make([]Trick, 1),
+		workPermit: make(chan struct{}, 1),
 	}
 }
 
-func (g *CallBreak) AddPlayer(p PlayerInterface) error {
-	if len(g.players) == NPlayers {
-		return fmt.Errorf("couldn't add more players: table already full")
+// add a player to the game. returns an authentication token on success
+// else return error on failure
+func (game *CallBreak) AddPlayer(name string) (Token, error) {
+
+	game.workPermit <- struct{}{}
+	defer func() { <-game.workPermit }()
+
+	if game.TotalPlayers == NPlayers {
+		return "", fmt.Errorf("couldn't add more players: table already full")
 	}
 
-	g.players = append(g.players, player{PlayerInterface: p})
-	return nil
+	player := &game.Players[game.TotalPlayers]
+	player.Name = name
+	//TODO implement more secure token mechanism
+	player.token = Token(fmt.Sprint(game.TotalPlayers))
+	game.TotalPlayers += 1
 
+	if game.TotalPlayers == NPlayers {
+		game.Rounds[game.RoundNumber].deal()
+		// TODO: implement called
+		game.Stage = CALLED
+	}
+
+	log.Infof("add player %s with token %s", player.Name, player.token)
+	return player.token, nil
 }
 
 // deal the cards to the players
 // each player can now make a call to GetHand
 // TODO: auto trigger this action when round starts
-func (g *CallBreak) Deal() error {
-	if count := len(g.players); count != 4 {
-		msg := fmt.Errorf("wrong number of players: wanted %d got %d",
-			NPlayers, count)
-		return msg
-	}
+func (round *Round) deal() {
 
 	d := deck.New()
 	// TODO: make sure each player is dealt at least one Hukum
 	// and at least one of Q, K, A else shuffle again
-	for i, c := range d {
-		g.players[i%NPlayers].Take(c)
+	for i, card := range d {
+		player := i % NPlayers
+		cardnumber := i / NPlayers
+		round.Hands[player][cardnumber] = card
 	}
 
-	for i := range g.players {
-		g.players[i].hand.Sort()
+	for i := range round.Hands {
+		round.Hands[i].Sort()
 	}
-
-	return nil
+	log.Infof("server: dealt: %s", round.Hands)
 }
 
-// get hand of the ith player of the game
-// TODO: authenticate before returning
-func (g *CallBreak) GetHand(i int) Hand {
-	return g.players[i].hand
-}
+// return sets of cards that are valid moves for current trick
+// if two sets at i and j > i are non-empty,
+// the played card must be in set at i
+// TODO: invalid card in hands will result in valid moves all empty
+func (round *Round) getValidMoves(player int) [][]deck.Card {
 
-// necessary update at the end of a trick
-func (g *CallBreak) Update() {
-	trick := &g.tricks[len(g.tricks)-1]
-	if trick.Size == NPlayers {
-		winner := trick.Winner()
-		g.NextPlayer = winner
-		g.players[winner].Score += 1
-		g.tricks = append(g.tricks, Trick{Lead: winner})
+	leadSuitWinners := []deck.Card{}
+	leadSuit := []deck.Card{}
+	turupWinners := []deck.Card{}
+	playables := []deck.Card{}
+
+	trick := round.Tricks[round.TrickNumber]
+	hand := round.Hands[player]
+
+	if trick.Size == 0 {
+		for _, c := range hand {
+			if c.Playable {
+				playables = append(playables, c)
+			}
+		}
+		return [][]deck.Card{leadSuitWinners, leadSuit, turupWinners, playables}
 	}
+
+	winner := trick.Cards[trick.Winner()]
+	leader := trick.Cards[trick.Lead]
+
+	for _, c := range hand {
+		if !c.Playable {
+			continue
+		}
+
+		if c.Suit == leader.Suit {
+			if winner.Suit == leader.Suit && c.Rank > winner.Rank {
+				leadSuitWinners = append(leadSuitWinners, c)
+			} else {
+				leadSuit = append(leadSuit, c)
+			}
+		} else if c.Suit == winner.Suit && c.Rank > winner.Rank {
+			turupWinners = append(turupWinners, c)
+		} else {
+			playables = append(playables, c)
+		}
+	}
+	return [][]deck.Card{leadSuitWinners, leadSuit, turupWinners, playables}
+
 }
 
 // the next player in line playes the card c
 // TODO: authorize the player for this action
-func (g *CallBreak) Play(c deck.Card) error {
+func (game *CallBreak) Play(token Token, card deck.Card) error {
 
-	g.Update() // Critical to call this
+	game.workPermit <- struct{}{}
+	defer func() { <-game.workPermit }()
 
-	// TODO: check for all possible errors first
-	// current trick must not be full
-	// nextPlayer must have the card
-	// nextPlayer must play current suit if in hand
-	// nextPlayer must play spade if current suit not in hand
-	// nextPlayer can play whatever if no space and no current suit in hand
-	// we should be able to eat up all subsequent errors after these checks
+	// assert Play is currently valid move
+	//      players have been dealt the cards
+	//      players have made the calls
+	//      there is an active round and active trick
+	log.Infof("server: player %s attempted play with %s", token, card)
 
-	// the player plays the card
-	player := &g.players[g.NextPlayer]
-	err := player.Play(c)
-	if err != nil {
-		return fmt.Errorf("game could not play: %v", err)
+	player := -1
+	for i, p := range game.Players {
+		if p.token == token {
+			player = i
+			break
+		}
 	}
-	g.NextPlayer = (g.NextPlayer + 1) % NPlayers
+	if player == -1 {
+		return fmt.Errorf("cannot play: invalid token")
+	}
 
-	// the card gets added to the trick
-	// TODO: it's a problem if player.Play() succeeds
-	// but trick.Add fails
-	trick := &g.tricks[len(g.tricks)-1]
-	err = trick.Add(c)
-	if err != nil {
-		return fmt.Errorf("game could not add to trick: %v", err)
+	if game.Stage != CALLED {
+		return fmt.Errorf("cannot play: not all players have called")
+	}
+
+	// TODO check that the RoundNumber and TrickNumber are valid
+	// before accessing the array with those values
+	round := &game.Rounds[game.RoundNumber]
+	trick := &round.Tricks[round.TrickNumber]
+	next := (trick.Lead + trick.Size) % NPlayers
+
+	// TODO: eventually move this "server:" as a logger field
+	log.Infof("server: RoundNumber: %d\tTrickNumber: %d",
+		game.RoundNumber, round.TrickNumber)
+	log.Infof("server: trick: %s (size: %d lead: %d)",
+		trick.Cards, trick.Size, trick.Lead)
+	log.Infof("server: Hand: %s", round.Hands[player])
+
+	if player != next {
+		return fmt.Errorf("you are not up next")
+	}
+
+	if game.RoundNumber == NRounds {
+		return fmt.Errorf("no active trick to play on")
+	}
+
+	validMoveSets := round.getValidMoves(player)
+	log.Infof("server: valid move sets: \n")
+	log.Infof("\tleading suit winners: %s", validMoveSets[0])
+	log.Infof("\tleading suit: %s", validMoveSets[1])
+	log.Infof("\tturup winners: %s", validMoveSets[2])
+	log.Infof("\tremaining playables: %s", validMoveSets[3])
+	// TODO should be able to refactor this into a function
+	for i, validMoveSet := range validMoveSets {
+		if len(validMoveSet) == 0 {
+			continue
+		}
+
+		if slices.Contains(validMoveSet, card) {
+			break
+		}
+
+		// temporary log
+		log.Infof("invalid move from the player")
+		switch i {
+		//TODO update these ints with nicely named constants
+		case 0:
+			return fmt.Errorf("must play winning card of the leading suit")
+		case 1:
+			return fmt.Errorf("must play card of the leading suit")
+		case 2:
+			return fmt.Errorf("must play a Hukum card")
+		case 3:
+			return fmt.Errorf("must play a card in hand")
+		}
+		return fmt.Errorf("invalid card")
+	}
+
+	hand := &round.Hands[player]
+	for i, c := range hand { // play the card
+		if c.Suit == card.Suit && c.Rank == card.Rank {
+			hand[i].Playable = false
+			err := round.Tricks[round.TrickNumber].Add(card)
+			if err != nil {
+				panic(fmt.Errorf("cannot play: %v", err))
+			}
+			break
+		}
+	}
+
+	if trick.Size == NPlayers { // update results
+		winner := trick.Winner()
+		round.Breaks[winner] += 1
+		round.TrickNumber += 1
+		if round.TrickNumber < NTricks {
+			round.Tricks[round.TrickNumber].Lead = winner
+		}
+	}
+
+	// next round
+	if round.TrickNumber == NTricks {
+		game.RoundNumber += 1
+		if game.RoundNumber < NRounds {
+			round := &game.Rounds[game.RoundNumber]
+			round.deal()
+			round.Tricks[round.TrickNumber].Lead = game.RoundNumber % NPlayers
+		}
 	}
 
 	return nil
-}
-
-func (g *CallBreak) CurrentTrick() Trick {
-	return g.tricks[len(g.tricks)-1]
-}
-
-func (g *CallBreak) Score() []score {
-	scores := []score{}
-	for _, player := range g.players {
-		scores = append(scores, player.Score)
-	}
-	return scores
 }
