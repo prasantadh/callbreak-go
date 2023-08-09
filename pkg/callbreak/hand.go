@@ -13,9 +13,9 @@ import (
 // sort by suit, Hukum -> itta -> chidi -> paan
 // for the same suit, sort by rank descending
 func (h *Hand) Sort() {
-	sort.Slice(*h, func(i, j int) bool {
-		this := (*h)[i]
-		other := (*h)[j]
+	sort.Slice(h[:], func(i, j int) bool {
+		this := h[i]
+		other := h[j]
 		if this.Suit == other.Suit {
 			return this.Rank > other.Rank
 		}
