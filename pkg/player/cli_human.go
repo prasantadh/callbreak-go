@@ -2,7 +2,6 @@ package player
 
 import (
 	"github.com/prasantadh/callbreak-go/pkg/callbreak"
-	"github.com/prasantadh/callbreak-go/pkg/deck"
 )
 
 type CliHuman struct {
@@ -18,6 +17,6 @@ func (p *CliHuman) Token() callbreak.Token {
 	return p.token
 }
 
-func (p *CliHuman) Play(game *callbreak.CallBreak) (deck.Card, error) {
-	return deck.Card{}, nil
+func (p *CliHuman) Play(game *callbreak.CallBreak) {
+	return
 }

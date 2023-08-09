@@ -9,6 +9,10 @@ import (
 )
 
 func (g *CallBreak) Query(token Token) (*CallBreak, error) {
+
+	g.workPermit <- struct{}{}
+	defer func() { <-g.workPermit }()
+
 	// TODO if token matches game token return everything
 	// if token matches a player token, blur out other players
 	// if token isn't a match return error
@@ -25,7 +29,7 @@ func (g *CallBreak) Query(token Token) (*CallBreak, error) {
 	}
 
 	// construct the response for this player
-	response := g
+	response := *g
 	for i := range g.Players {
 		if i != current {
 			response.Players[i].token = ""
@@ -33,11 +37,6 @@ func (g *CallBreak) Query(token Token) (*CallBreak, error) {
 	}
 
 	for r, round := range g.Rounds {
-		for t, trick := range round.Tricks {
-			if trick.Winner() != current {
-				response.Rounds[r].Tricks[t] = Trick{}
-			}
-		}
 		for hand := range round.Hands {
 			if hand != current {
 				response.Rounds[r].Hands[hand] = Hand{}
@@ -45,17 +44,23 @@ func (g *CallBreak) Query(token Token) (*CallBreak, error) {
 		}
 	}
 
-	return response, nil
+	return &response, nil
 
 }
 
 func New() *CallBreak {
-	return &CallBreak{}
+	return &CallBreak{
+		workPermit: make(chan struct{}, 1),
+	}
 }
 
 // add a player to the game. returns an authentication token on success
 // else return error on failure
 func (game *CallBreak) AddPlayer(name string) (Token, error) {
+
+	game.workPermit <- struct{}{}
+	defer func() { <-game.workPermit }()
+
 	if game.TotalPlayers == NPlayers {
 		return "", fmt.Errorf("couldn't add more players: table already full")
 	}
@@ -84,22 +89,22 @@ func (round *Round) deal() {
 	d := deck.New()
 	// TODO: make sure each player is dealt at least one Hukum
 	// and at least one of Q, K, A else shuffle again
-	round.TrickNumber = 0
 	for i, card := range d {
 		player := i % NPlayers
-		round.Hands[player][round.TrickNumber] = card
+		cardnumber := i / NPlayers
+		round.Hands[player][cardnumber] = card
 	}
-	round.TrickNumber = 0
 
 	for i := range round.Hands {
 		round.Hands[i].Sort()
 	}
-
+	log.Infof("server: dealt: %s", round.Hands)
 }
 
 // return sets of cards that are valid moves for current trick
 // if two sets at i and j > i are non-empty,
 // the played card must be in set at i
+// TODO: invalid card in hands will result in valid moves all empty
 func (round *Round) getValidMoves(player int) [][]deck.Card {
 
 	leadSuitWinners := []deck.Card{}
@@ -107,7 +112,7 @@ func (round *Round) getValidMoves(player int) [][]deck.Card {
 	turupWinners := []deck.Card{}
 	playables := []deck.Card{}
 
-	trick := round.Tricks[round.TrickNumber-1]
+	trick := round.Tricks[round.TrickNumber]
 	hand := round.Hands[player]
 
 	if trick.Size == 0 {
@@ -146,15 +151,15 @@ func (round *Round) getValidMoves(player int) [][]deck.Card {
 // the next player in line playes the card c
 // TODO: authorize the player for this action
 func (game *CallBreak) Play(token Token, card deck.Card) error {
-	// assert there is an active round and active trick to play on
-	// assert players are dealt the card and have made the calls
-	// assert only one player can be going through this path at a time
-	// if operating asynchronously
+
+	game.workPermit <- struct{}{}
+	defer func() { <-game.workPermit }()
+
 	// assert Play is currently valid move
 	//      players have been dealt the cards
 	//      players have made the calls
 	//      there is an active round and active trick
-	log.Infof("player %s attempted play with %s", token, card)
+	log.Infof("server: player %s attempted play with %s", token, card)
 
 	player := -1
 	for i, p := range game.Players {
@@ -171,9 +176,19 @@ func (game *CallBreak) Play(token Token, card deck.Card) error {
 		return fmt.Errorf("cannot play: not all players have called")
 	}
 
-	round := &game.Rounds[game.RoundNumber-1]
-	trick := &round.Tricks[round.TrickNumber-1]
+	// TODO check that the RoundNumber and TrickNumber are valid
+	// before accessing the array with those values
+	round := &game.Rounds[game.RoundNumber]
+	trick := &round.Tricks[round.TrickNumber]
 	next := (trick.Lead + trick.Size) % NPlayers
+
+	// TODO: eventually move this "server:" as a logger field
+	log.Infof("server: RoundNumber: %d\tTrickNumber: %d",
+		game.RoundNumber, round.TrickNumber)
+	log.Infof("server: trick: %s (size: %d lead: %d)",
+		trick.Cards, trick.Size, trick.Lead)
+	log.Infof("server: Hand: %s", round.Hands[player])
+
 	if player != next {
 		return fmt.Errorf("you are not up next")
 	}
@@ -183,7 +198,11 @@ func (game *CallBreak) Play(token Token, card deck.Card) error {
 	}
 
 	validMoveSets := round.getValidMoves(player)
-	log.Infof("valid move sets: %s", validMoveSets)
+	log.Infof("server: valid move sets: \n")
+	log.Infof("\tleading suit winners: %s", validMoveSets[0])
+	log.Infof("\tleading suit: %s", validMoveSets[1])
+	log.Infof("\tturup winners: %s", validMoveSets[2])
+	log.Infof("\tremaining playables: %s", validMoveSets[3])
 	// TODO should be able to refactor this into a function
 	for i, validMoveSet := range validMoveSets {
 		if len(validMoveSet) == 0 {
@@ -194,6 +213,8 @@ func (game *CallBreak) Play(token Token, card deck.Card) error {
 			break
 		}
 
+		// temporary log
+		log.Infof("invalid move from the player")
 		switch i {
 		//TODO update these ints with nicely named constants
 		case 0:
@@ -205,13 +226,17 @@ func (game *CallBreak) Play(token Token, card deck.Card) error {
 		case 3:
 			return fmt.Errorf("must play a card in hand")
 		}
+		return fmt.Errorf("invalid card")
 	}
 
 	hand := &round.Hands[player]
 	for i, c := range hand { // play the card
 		if c.Suit == card.Suit && c.Rank == card.Rank {
 			hand[i].Playable = false
-			round.Tricks[round.TrickNumber-1].Add(card)
+			err := round.Tricks[round.TrickNumber].Add(card)
+			if err != nil {
+				panic(fmt.Errorf("cannot play: %v", err))
+			}
 			break
 		}
 	}
@@ -226,9 +251,13 @@ func (game *CallBreak) Play(token Token, card deck.Card) error {
 	}
 
 	// next round
-	if game.RoundNumber < NRounds && round.TrickNumber == NTricks {
+	if round.TrickNumber == NTricks {
 		game.RoundNumber += 1
-		game.Rounds[game.RoundNumber].deal()
+		if game.RoundNumber < NRounds {
+			round := &game.Rounds[game.RoundNumber]
+			round.deal()
+			round.Tricks[round.TrickNumber].Lead = game.RoundNumber % NPlayers
+		}
 	}
 
 	return nil

@@ -84,17 +84,10 @@ func (r *Renderer) Render(g *callbreak.CallBreak) {
 
 	// TODO: eventually only get one hand and display that
 	// for now display all hands
-	hands := []callbreak.Hand{}
-	state := g.GetState(r.token)
-	calls := []callbreak.Score{}
-	breaks := []callbreak.Score{}
-	for _, p := range state.Players {
-		r := p.Rounds[len(p.Rounds)-1]
-		breaks = append(breaks, r.Break)
-		calls = append(calls, r.Call)
-		hands = append(hands, r.Hand)
-	}
-	trick := state.Trick.Cards
+	state, _ := g.Query(r.token)
+	round := state.Rounds[state.RoundNumber]
+	hands := round.Hands
+	trick := round.Tricks[round.TrickNumber].Cards
 
 	for i := range trick { // little hack to make trick not-CrossedOut
 		trick[i].Playable = true
@@ -141,7 +134,7 @@ func (r *Renderer) Render(g *callbreak.CallBreak) {
 	sb.WriteString(blank(1))
 	sb.WriteString(BgWhiteString(" |"))
 	// printing the scoreboard values
-	for _, score := range breaks {
+	for _, score := range round.Breaks {
 		sb.WriteString(BgWhiteString(fmt.Sprintf(" %2d/_ |", score)))
 	}
 	// the game board
