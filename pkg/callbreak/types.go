@@ -22,6 +22,7 @@ type CallBreak struct {
 	RoundNumber  int // current round number
 	// TotalPlayers and RoundNumber might be better as names
 	workPermit chan struct{}
+    debug bool
 }
 
 type Player struct {
