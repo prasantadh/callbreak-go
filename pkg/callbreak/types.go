@@ -15,33 +15,52 @@ const (
 type CallBreak struct {
 	// TODO: think about have a token that provides access to all data in game
 	// and if array makes sense here and in used types recursively
-	Players      [NPlayers]Player
-	Rounds       [NRounds]Round
-	Stage        Stage
-	TotalPlayers int // number of players currently in the game
-	RoundNumber  int // current round number
+	Players      [NPlayers]Player `json:"players"`
+	Rounds       [NRounds]Round   `json:"rounds"`
+	Stage        Stage            `json:"stage"`
+	TotalPlayers int              `json:"totalplayers"`
+	RoundNumber  int              `json:"roundnumber"`
 	// TotalPlayers and RoundNumber might be better as names
 	workPermit chan struct{}
-    debug bool
+	debug      bool
+	Input      chan any
+	Update     chan struct{}
 }
 
 type Player struct {
-	Name  string
-	token Token
+	Id
+	Strategy
+	Client
+	AutoPlay bool
+}
+
+type Id struct {
+	Name  string `json:"name"`
+	Token `json:"token"`
 }
 
 type Token string
 
+type Strategy interface {
+	Call(CallBreak) (Call, error)
+	Break(CallBreak) (deck.Card, error)
+}
+
+type Client interface {
+	Update()
+	GetStrategy() Strategy
+}
+
 type Round struct {
 	Calls       [NPlayers]Score
-	Breaks      [NPlayers]Score
+	Scores      [NPlayers]Score
 	Hands       [NPlayers]Hand
 	Tricks      [NTricks]Trick
 	TrickNumber int // current Trick number
-	// TrickNumber might be a better name here
 }
 
 type Score int
+type Call Score
 
 type Hand [NTricks]deck.Card
 
@@ -55,7 +74,7 @@ type Trick struct {
 type Stage int
 
 const (
-	NOTREADY Stage = iota
+	NOTFULL Stage = iota
 	DEALT
 	CALLED
 	DONE

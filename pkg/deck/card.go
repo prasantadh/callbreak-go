@@ -26,3 +26,14 @@ func (c Card) String() string {
 	sb.WriteString(")")
 	return sb.String()
 }
+
+func (c *Card) IsValid() bool {
+	for _, suit := range Suits {
+		for _, rank := range Ranks {
+			if c.Suit == suit && c.Rank == rank {
+				return true
+			}
+		}
+	}
+	return false
+}

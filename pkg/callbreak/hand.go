@@ -53,23 +53,66 @@ func (h Hand) String() string {
 	return sb.String()
 }
 
-func (h Hand) HasPlayable(card deck.Card) bool {
-	for _, c := range h {
-		if c.Suit == card.Suit && c.Rank == card.Rank {
+func (h *Hand) HasPlayable(cards ...deck.Card) bool {
+	if len(cards) == 0 {
+		for _, c := range h {
 			if c.Playable {
 				return true
 			}
+		}
+		return false
+	}
+
+	for _, c := range cards {
+		found := false
+		for _, card := range h {
+			if card.Playable && c.Suit == card.Suit && c.Rank == card.Rank {
+				found = true
+				break
+			}
+		}
+		if !found {
 			return false
 		}
 	}
-	return false
+	return true
 }
 
-func (h Hand) HasSuit(suit deck.Suit) bool {
+func (h *Hand) HasSuit(suit deck.Suit) bool {
 	for _, c := range h {
 		if c.Playable == true && c.Suit == suit {
 			return true
 		}
 	}
 	return false
+}
+
+func (h *Hand) IsValid() bool {
+	if !h.HasPlayable() {
+		return false
+	}
+	d := deck.New()
+	for _, c := range *h {
+		found := false
+		for _, deckcard := range d {
+			if c.Suit != deckcard.Suit && c.Rank != deckcard.Rank {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
+func (h *Hand) Playables() []deck.Card {
+	playables := []deck.Card{}
+	for _, c := range h {
+		if c.Playable {
+			playables = append(playables, c)
+		}
+	}
+	return playables
 }

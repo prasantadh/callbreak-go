@@ -76,7 +76,7 @@ func ColoredHand(h callbreak.Hand) string {
 	return sb.String()
 }
 
-func (r *Renderer) Render(g *callbreak.CallBreak) {
+func (r *Renderer) Render(g callbreak.CallBreak) {
 	if r.token == "" {
 		fmt.Println("token not yet set!")
 		return
@@ -84,8 +84,7 @@ func (r *Renderer) Render(g *callbreak.CallBreak) {
 
 	// TODO: eventually only get one hand and display that
 	// for now display all hands
-	state, _ := g.Query(r.token)
-	round := state.Rounds[state.RoundNumber]
+	round := g.Rounds[g.RoundNumber]
 	hands := round.Hands
 	trick := round.Tricks[round.TrickNumber].Cards
 
@@ -134,7 +133,7 @@ func (r *Renderer) Render(g *callbreak.CallBreak) {
 	sb.WriteString(blank(1))
 	sb.WriteString(BgWhiteString(" |"))
 	// printing the scoreboard values
-	for _, score := range round.Breaks {
+	for _, score := range round.Scores {
 		sb.WriteString(BgWhiteString(fmt.Sprintf(" %2d/_ |", score)))
 	}
 	// the game board
