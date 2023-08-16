@@ -116,10 +116,12 @@ func getRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	strategy, err := callbreak.GetStrategy("basic")
-	if err != nil {
-		log.Errorf("error setting strategy: %v", err)
+	strategy := r.URL.Query().Get("strategy")
+	if len(name) == 0 {
+		failure(w, "invalid request: missing `strategy` field")
+		return
 	}
+
 	player, err := game.AddPlayer(name, strategy)
 	if err != nil {
 		failure(w, err.Error())

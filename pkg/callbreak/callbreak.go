@@ -1,6 +1,8 @@
 package callbreak
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/prasantadh/callbreak-go/pkg/deck"
@@ -17,7 +19,7 @@ func New() *CallBreak {
 
 // add a player to the game. returns an authentication token on success
 // else return error on failure
-func (game *CallBreak) AddPlayer(name string, strategy Strategy) (Id, error) {
+func (game *CallBreak) AddPlayer(name string, strategy string) (Id, error) {
 
 	game.workPermit <- struct{}{}
 	defer func() { <-game.workPermit }()
@@ -26,13 +28,24 @@ func (game *CallBreak) AddPlayer(name string, strategy Strategy) (Id, error) {
 		return Id{}, fmt.Errorf("could not add players: table already full")
 	}
 
-	player := game.Players[game.TotalPlayers]
+	player := &game.Players[game.TotalPlayers]
 	player.Name = name
-	// TODO implement more secure token mechanism
-	player.Token = Token(fmt.Sprint(game.TotalPlayers))
-	player.Strategy = strategy
+
+	token := make([]byte, 32)
+	_, err := rand.Read(token)
+	if err != nil {
+		return Id{}, fmt.Errorf("could not generate a token")
+	}
+	player.Token = Token(hex.EncodeToString(token))
+
+	s, err := GetStrategy(strategy)
+	if err != nil {
+		return Id{}, fmt.Errorf("could not set strategy: %v", err)
+	}
+	player.Strategy = s
+
+	log.Infof("add player %s with token %s", game.Players[game.TotalPlayers].Name, player.Token)
 	game.TotalPlayers += 1
-	log.Infof("add player %s with token %s", player.Name, player.Token)
 
 	if game.TotalPlayers == NPlayers {
 		game.Rounds[game.RoundNumber].deal()
@@ -68,7 +81,6 @@ func (round *Round) deal() {
 }
 
 // the next player in line playes the card c
-// TODO: authorize the player for this action
 func (game *CallBreak) Play(token Token, card deck.Card) error {
 
 	game.workPermit <- struct{}{}
@@ -129,10 +141,7 @@ func (game *CallBreak) Play(token Token, card deck.Card) error {
 	for i, c := range hand { // play the card
 		if c.Suit == card.Suit && c.Rank == card.Rank {
 			hand[i].Playable = false
-			err := round.Tricks[round.TrickNumber].Add(card)
-			if err != nil {
-				panic(fmt.Errorf("cannot play: %v", err))
-			}
+			round.Tricks[round.TrickNumber].Add(card)
 			break
 		}
 	}

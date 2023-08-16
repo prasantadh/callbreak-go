@@ -36,14 +36,13 @@ func (t Trick) Winner() int {
 
 }
 
-func (t *Trick) Add(card deck.Card) error {
+func (t *Trick) Add(card deck.Card) {
 	if t.Size == NPlayers {
-		return fmt.Errorf("trick already full")
+		panic(fmt.Errorf("trick already full"))
 	}
 	card.Playable = false
 	t.Cards[(t.Lead+t.Size)%NPlayers] = card
 	t.Size += 1
-	return nil
 }
 
 func (t *Trick) LeadCard() deck.Card {
