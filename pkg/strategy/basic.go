@@ -22,7 +22,7 @@ func (s *Basic) Call(game callbreak.CallBreak) (callbreak.Call, error) {
 func (s *Basic) Break(game callbreak.CallBreak) (deck.Card, error) {
 	moves, err := callbreak.GetValidMoves(game)
 	if err != nil {
-		fmt.Errorf("could not get a valid move: %v", err)
+		return deck.Card{}, fmt.Errorf("could not get a valid move: %v", err)
 	}
 	return moves[0], nil
 }
