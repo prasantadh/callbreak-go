@@ -24,12 +24,6 @@ type CallBreak struct {
 	debug      bool
 }
 
-type Assistant interface {
-	SetToken(Token)
-	SetStrategy(Strategy)
-	Assist()
-}
-
 type PlayerId struct {
 	Name  string `json:"name"`
 	Token `json:"token"`
@@ -38,8 +32,8 @@ type PlayerId struct {
 type Token string
 
 type Strategy interface {
-	Call(CallBreak) (Call, error)
-	Break(CallBreak) (deck.Card, error)
+	Call(*CallBreak) (Call, error)
+	Break(*CallBreak) (deck.Card, error)
 }
 
 type Round struct {

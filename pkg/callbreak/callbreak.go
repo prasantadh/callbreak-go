@@ -18,9 +18,29 @@ func New() *CallBreak {
 	return game
 }
 
-func (game *CallBreak) Query(token Token) (CallBreak, error) {
-	// TODO return token unauthorized error
-	return *game, nil
+// Get the current state of the game as visible to a token
+func (game *CallBreak) Query(token Token) (*CallBreak, error) {
+	// todo: currently returns tricks for all players.
+	// consider sending out only the tricks won by current player
+	me := game.Turn(&token)
+	if me == NPlayers {
+		return nil, fmt.Errorf("unauthorized token")
+	}
+	response := *game
+	for p := range game.Players {
+		if p != me {
+			response.Players[p].Token = Token("")
+		}
+	}
+	for r := range response.Rounds {
+		round := &response.Rounds[r]
+		for p := range game.Players {
+			if p != me {
+				round.Hands[p] = Hand{}
+			}
+		}
+	}
+	return &response, nil
 }
 
 // add a player to the game. returns an authentication token on success
@@ -49,7 +69,7 @@ func (game *CallBreak) AddPlayer(name, strategy string, timeout time.Duration) (
 	token := Token(hex.EncodeToString(buffer))
 	playerid := PlayerId{Name: name, Token: token}
 
-	assistant := BasicAssistant{strategy: s, game: game, token: token}
+	assistant := Assistant{strategy: s, game: game, last: game, token: token}
 	assistant.ticker = time.NewTicker(timeout)
 	go assistant.Assist()
 	game.Players[game.TotalPlayers] = playerid
@@ -66,9 +86,7 @@ func (game *CallBreak) AddPlayer(name, strategy string, timeout time.Duration) (
 	return playerid, nil
 }
 
-// deal the cards to the players
-// each player can now make a call to GetHand
-// TODO: auto trigger this action when round starts
+// deal the cards to the players.
 func (round *Round) deal() {
 
 	d := deck.New()
@@ -138,7 +156,7 @@ func (game *CallBreak) Break(token Token, card deck.Card) error {
 		return fmt.Errorf("you are not up next")
 	}
 
-	validMoves, err := GetValidMoves(*game)
+	validMoves, err := GetValidMoves(game)
 	log.Infof("valid moves: %s", validMoves)
 	if err != nil {
 		return fmt.Errorf("could not get valid moves: %v", err)
@@ -155,6 +173,7 @@ func (game *CallBreak) Break(token Token, card deck.Card) error {
 			break
 		}
 	}
+	log.Infof("server: move succeeded: trick: %v", *trick)
 
 	if trick.Size == NPlayers { // update results
 		winner := trick.Winner()
@@ -180,6 +199,8 @@ func (game *CallBreak) Break(token Token, card deck.Card) error {
 	return nil
 }
 
+// returns the turn in the game of the given token.
+// [0-3] on success, NPlayers on failure
 func (game *CallBreak) Turn(token *Token) int {
 	var i int
 	for i = range game.Players {

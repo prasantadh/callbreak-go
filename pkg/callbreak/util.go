@@ -8,7 +8,7 @@ import (
 
 // return a slice containing cards that can be played
 // by the player with next turn in the ongoing trick
-func GetValidMoves(game CallBreak) ([]deck.Card, error) {
+func GetValidMoves(game *CallBreak) ([]deck.Card, error) {
 
 	round := game.Rounds[game.RoundNumber]
 	trick := round.Tricks[round.TrickNumber]

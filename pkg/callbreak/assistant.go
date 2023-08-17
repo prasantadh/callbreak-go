@@ -4,15 +4,15 @@ import (
 	"time"
 )
 
-type BasicAssistant struct {
+type Assistant struct {
 	strategy Strategy
 	game     *CallBreak
-	last     CallBreak
+	last     *CallBreak
 	ticker   *time.Ticker
 	token    Token
 }
 
-func (p *BasicAssistant) Assist() {
+func (p *Assistant) Assist() {
 	for {
 		<-p.ticker.C
 		current, _ := p.game.Query(p.token)

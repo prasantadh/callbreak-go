@@ -15,11 +15,11 @@ func init() {
 
 type Basic struct{}
 
-func (s *Basic) Call(game callbreak.CallBreak) (callbreak.Call, error) {
+func (s *Basic) Call(game *callbreak.CallBreak) (callbreak.Call, error) {
 	return callbreak.Call(1), nil
 }
 
-func (s *Basic) Break(game callbreak.CallBreak) (deck.Card, error) {
+func (s *Basic) Break(game *callbreak.CallBreak) (deck.Card, error) {
 	moves, err := callbreak.GetValidMoves(game)
 	if err != nil {
 		return deck.Card{}, fmt.Errorf("could not get a valid move: %v", err)
