@@ -119,24 +119,13 @@ func (game *CallBreak) Break(token Token, card deck.Card) error {
 	//      players have made the calls
 	//      there is an active round and active trick
 	log.Infof("server: player %s attempted play with %s", token[:4], card)
-
-	player := -1
-	for i, p := range game.Players {
-		if p.Token == token {
-			player = i
-			break
-		}
-	}
-	if player == -1 {
-		return fmt.Errorf("cannot play: invalid token")
-	}
-
-	if game.RoundNumber == NRounds {
-		return fmt.Errorf("game over")
+	player := game.Turn(&token)
+	if player == NPlayers {
+		return fmt.Errorf("invalid token")
 	}
 
 	if game.Stage != CALLED {
-		return fmt.Errorf("cannot play: not all players have called")
+		return fmt.Errorf("not a valid stage for this move")
 	}
 
 	round := &game.Rounds[game.RoundNumber]
@@ -145,16 +134,16 @@ func (game *CallBreak) Break(token Token, card deck.Card) error {
 	trick := &round.Tricks[round.TrickNumber]
 	next := (trick.Lead + trick.Size) % NPlayers
 
+	if player != next {
+		return fmt.Errorf("you are not up next")
+	}
+
 	// TODO: eventually move this "server:" as a logger field
 	log.Infof("server: RoundNumber: %d\tTrickNumber: %d",
 		game.RoundNumber, round.TrickNumber)
 	log.Infof("server: trick: %s (size: %d lead: %d)",
 		trick.Cards, trick.Size, trick.Lead)
 	log.Infof("server: Hand: %s", round.Hands[player])
-
-	if player != next {
-		return fmt.Errorf("you are not up next")
-	}
 
 	validMoves, err := GetValidMoves(game)
 	log.Infof("valid moves: %s", validMoves)
@@ -165,6 +154,7 @@ func (game *CallBreak) Break(token Token, card deck.Card) error {
 		return fmt.Errorf("invalid move from player")
 	}
 
+	// TODO: all the following sections can likely be refactored out to a func
 	hand := &round.Hands[player]
 	for i, c := range hand { // play the card
 		if c.Suit == card.Suit && c.Rank == card.Rank {
@@ -192,6 +182,7 @@ func (game *CallBreak) Break(token Token, card deck.Card) error {
 			round.deal()
 			round.Tricks[round.TrickNumber].Lead = game.RoundNumber % NPlayers
 		} else {
+			log.Infof("Round Scores: %v", round.Scores)
 			game.Stage = DONE
 		}
 	}
@@ -217,6 +208,24 @@ func (game *CallBreak) Next() int {
 	return (trick.Lead + trick.Size) % NPlayers
 }
 
-func (game *CallBreak) Call(token Token, call Call) {
-	return
+func (game *CallBreak) Call(token Token, call Score) error {
+	game.workPermit <- struct{}{}
+	defer func() { <-game.workPermit }()
+
+	turn := game.Turn(&token)
+	if turn == NPlayers {
+		return fmt.Errorf("invalid token")
+	}
+
+	if game.Stage != DEALT {
+		return fmt.Errorf("not a valid move at current stage")
+	}
+
+	next := game.Next()
+	if next != turn {
+		return fmt.Errorf("not your turn")
+	}
+
+	game.Rounds[game.RoundNumber].Calls[turn] = call
+	return nil
 }

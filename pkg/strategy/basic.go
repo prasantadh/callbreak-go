@@ -15,8 +15,8 @@ func init() {
 
 type Basic struct{}
 
-func (s *Basic) Call(game *callbreak.CallBreak) (callbreak.Call, error) {
-	return callbreak.Call(1), nil
+func (s *Basic) Call(game *callbreak.CallBreak) (callbreak.Score, error) {
+	return callbreak.Score(1), nil
 }
 
 func (s *Basic) Break(game *callbreak.CallBreak) (deck.Card, error) {

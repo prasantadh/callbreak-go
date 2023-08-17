@@ -32,7 +32,7 @@ type PlayerId struct {
 type Token string
 
 type Strategy interface {
-	Call(*CallBreak) (Call, error)
+	Call(*CallBreak) (Score, error)
 	Break(*CallBreak) (deck.Card, error)
 }
 
@@ -45,7 +45,6 @@ type Round struct {
 }
 
 type Score int
-type Call Score
 
 type Hand [NTricks]deck.Card
 
@@ -64,3 +63,7 @@ const (
 	CALLED
 	DONE
 )
+
+type Config struct {
+	Strategy string
+}
