@@ -51,13 +51,24 @@ func success(w http.ResponseWriter, data any) {
 }
 
 func getNew(w http.ResponseWriter, r *http.Request) {
-	game = callbreak.New()
-	response := Response{
-		Status: Success,
-		Data:   "a new game was created. TODO: handle multiple games",
+	q := r.URL.Query().Get("config")
+	if len(q) == 0 {
+		failure(w, "field `config` is required")
+		return
 	}
-	b, _ := json.Marshal(response)
-	w.Write(b)
+
+	var config callbreak.Config
+	err := json.Unmarshal([]byte(q), &config)
+	if err != nil {
+		failure(w, "could not parse config: "+err.Error())
+		return
+	}
+	game, err = callbreak.New(config)
+	if err != nil {
+		failure(w, "could not create a game")
+		return
+	}
+	success(w, "a new game was created. <TODO> handle multple games")
 }
 
 func getCall(w http.ResponseWriter, r *http.Request) {

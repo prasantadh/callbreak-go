@@ -13,8 +13,15 @@ func RegisterStrategy(name string, f func() Strategy) error {
 }
 
 func GetStrategy(name string) (Strategy, error) {
-	if _, ok := registry[name]; !ok {
-		return nil, fmt.Errorf("strategy %s does not exist", name)
+	if err := VerifyStrategy(name); err != nil {
+		return nil, err
 	}
 	return registry[name](), nil
+}
+
+func VerifyStrategy(name string) error {
+	if _, ok := registry[name]; !ok {
+		return fmt.Errorf("strategy does not exist")
+	}
+	return nil
 }

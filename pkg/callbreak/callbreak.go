@@ -11,11 +11,68 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-func New() *CallBreak {
+type PlayerConfig struct {
+	Name          string `json:"name"`
+	Strategy      string `json:"strategy"`
+	AssistTimeout time.Duration
+}
+
+/*
+assist_min_timeout: 500ms
+assis_max_timeout: 30s
+players:
+  - name: bot0
+    strategy: basic
+    assist_timeout: 100ms
+  - name: bot1
+    strategy: basic
+    assist_timeout: 100ms
+  - name: bot3
+    strategy: basic
+    assist_timeout: 100ms
+*/
+type Config struct {
+	Debug   bool `json:"debug,omitempty"`
+	Players []struct {
+		Name          string `json:"name"`
+		Strategy      string `json:"strategy"`
+        AssistTimeout time.Duration `json:"assist_timeout"`
+	}
+}
+
+const (
+	AssistMinTimeout = 500 * time.Millisecond
+	AssistMaxTimeout = 30 * time.Second
+)
+
+func New(config Config) (*CallBreak, error) {
+	if len(config.Players) > NPlayers {
+		return nil, fmt.Errorf("too many players, maximum %d allowed", NPlayers)
+	}
+
 	game := &CallBreak{
 		workPermit: make(chan struct{}, 1),
 	}
-	return game
+
+	for _, player := range config.Players {
+		if player.AssistTimeout < AssistMinTimeout {
+			return nil,
+				fmt.Errorf("assist_min_timeout must be more than %s", AssistMinTimeout)
+		}
+		if err := VerifyStrategy(player.Strategy); err != nil {
+			return nil, fmt.Errorf("could not add player: %v", err)
+		}
+		if player.AssistTimeout > AssistMaxTimeout {
+			return nil,
+				fmt.Errorf("bottimeout must be less than %d", AssistMinTimeout)
+		}
+		_, err := game.AddPlayer(player.Name, player.Strategy, player.AssistTimeout)
+		if err != nil {
+			return nil, fmt.Errorf("could not add player: %v", err)
+		}
+	}
+
+	return game, nil
 }
 
 // Get the current state of the game as visible to a token
