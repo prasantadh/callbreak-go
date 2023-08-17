@@ -38,8 +38,6 @@ func TestHigherRankWins(t *testing.T) {
 
 func TestNotFullTrickHasWinner(t *testing.T) {
 	trick := Trick{Lead: 2}
-	// trick.Cards[0] = deck.Card{Suit: deck.Chidi, Rank: deck.Ekka}
-	// trick.Cards[3] = deck.Card{Suit: deck.Hukum, Rank: deck.Dua}
 	trick.Cards[2] = deck.Card{Suit: deck.Itta, Rank: deck.Bassa}
 	want := 2
 	got := trick.Winner()
