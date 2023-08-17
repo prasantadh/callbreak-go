@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/prasantadh/callbreak-go/pkg/callbreak"
 	"github.com/prasantadh/callbreak-go/pkg/deck"
-	autoplay "github.com/prasantadh/callbreak-go/pkg/player"
 	_ "github.com/prasantadh/callbreak-go/pkg/strategy"
 
 	log "github.com/sirupsen/logrus"
@@ -123,21 +123,11 @@ func getRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	player, err := game.AddPlayer(name, strategy)
+	player, err := game.AddPlayer(name, strategy, 200*time.Millisecond)
 	if err != nil {
 		failure(w, err.Error())
 		return
 	}
-	s, err := callbreak.GetStrategy(strategy)
-	if err != nil {
-		log.Error("could not assign a strategy to assistant")
-	}
-	config := autoplay.Config{
-		Game:     game,
-		Token:    player.Token,
-		Strategy: s,
-	}
-	autoplay.New(config)
 
 	response := Response{
 		Status: Success,

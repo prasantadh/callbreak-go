@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	"github.com/prasantadh/callbreak-go/pkg/deck"
 	log "github.com/sirupsen/logrus"
@@ -17,38 +18,43 @@ func New() *CallBreak {
 	return game
 }
 
-func (game *CallBreak) Query(token Token) CallBreak {
-	return *game
+func (game *CallBreak) Query(token Token) (CallBreak, error) {
+	// TODO return token unauthorized error
+	return *game, nil
 }
 
 // add a player to the game. returns an authentication token on success
 // else return error on failure
-func (game *CallBreak) AddPlayer(name string, strategy string) (Id, error) {
+func (game *CallBreak) AddPlayer(name, strategy string, timeout time.Duration) (PlayerId, error) {
+	// TODO eventually add a registry for assistant
+	// this works for now
 
 	game.workPermit <- struct{}{}
 	defer func() { <-game.workPermit }()
 
 	if game.TotalPlayers == NPlayers {
-		return Id{}, fmt.Errorf("could not add players: table already full")
+		return PlayerId{}, fmt.Errorf("could not add players: table full")
 	}
-
-	player := &game.Players[game.TotalPlayers]
-	player.Name = name
-
-	token := make([]byte, 32)
-	_, err := rand.Read(token)
-	if err != nil {
-		return Id{}, fmt.Errorf("could not generate a token")
-	}
-	player.Token = Token(hex.EncodeToString(token))
 
 	s, err := GetStrategy(strategy)
 	if err != nil {
-		return Id{}, fmt.Errorf("could not set strategy: %v", err)
+		return PlayerId{}, fmt.Errorf("could not set strategy: %v", err)
 	}
-	player.Strategy = s
 
-	log.Infof("add player %s with token %s", game.Players[game.TotalPlayers].Name, player.Token)
+	buffer := make([]byte, 32)
+	_, err = rand.Read(buffer)
+	if err != nil {
+		return PlayerId{}, fmt.Errorf("could not generate a token")
+	}
+	token := Token(hex.EncodeToString(buffer))
+	playerid := PlayerId{Name: name, Token: token}
+
+	assistant := BasicAssistant{strategy: s, game: game, token: token}
+	assistant.ticker = time.NewTicker(timeout)
+	go assistant.Assist()
+	game.Players[game.TotalPlayers] = playerid
+
+	log.Infof("add player %s with token %s", playerid.Name, playerid.Token)
 	game.TotalPlayers += 1
 
 	if game.TotalPlayers == NPlayers {
@@ -57,7 +63,7 @@ func (game *CallBreak) AddPlayer(name string, strategy string) (Id, error) {
 		game.Stage = CALLED
 	}
 
-	return player.Id, nil
+	return playerid, nil
 }
 
 // deal the cards to the players
@@ -94,7 +100,7 @@ func (game *CallBreak) Break(token Token, card deck.Card) error {
 	//      players have been dealt the cards
 	//      players have made the calls
 	//      there is an active round and active trick
-	log.Infof("server: player %s attempted play with %s", token, card)
+	log.Infof("server: player %s attempted play with %s", token[:4], card)
 
 	player := -1
 	for i, p := range game.Players {
@@ -166,6 +172,8 @@ func (game *CallBreak) Break(token Token, card deck.Card) error {
 			round := &game.Rounds[game.RoundNumber]
 			round.deal()
 			round.Tricks[round.TrickNumber].Lead = game.RoundNumber % NPlayers
+		} else {
+			game.Stage = DONE
 		}
 	}
 
