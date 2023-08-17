@@ -17,6 +17,10 @@ func New() *CallBreak {
 	return game
 }
 
+func (game *CallBreak) Query(token Token) CallBreak {
+	return *game
+}
+
 // add a player to the game. returns an authentication token on success
 // else return error on failure
 func (game *CallBreak) AddPlayer(name string, strategy string) (Id, error) {
@@ -81,7 +85,7 @@ func (round *Round) deal() {
 }
 
 // the next player in line playes the card c
-func (game *CallBreak) Play(token Token, card deck.Card) error {
+func (game *CallBreak) Break(token Token, card deck.Card) error {
 
 	game.workPermit <- struct{}{}
 	defer func() { <-game.workPermit }()
@@ -168,25 +172,22 @@ func (game *CallBreak) Play(token Token, card deck.Card) error {
 	return nil
 }
 
-func (game *CallBreak) Turn(token *Token) (int, error) {
-	if game.RoundNumber == NRounds {
-		return -1, fmt.Errorf("game over")
-	}
-
-	for i := range game.Players {
+func (game *CallBreak) Turn(token *Token) int {
+	var i int
+	for i = range game.Players {
 		if game.Players[i].Token == *token {
-			return i, nil
+			return i
 		}
 	}
-	return -1, fmt.Errorf("player not found")
+	return i
 }
 
-func (game *CallBreak) Next() (int, error) {
-	if game.RoundNumber == NRounds {
-		return -1, fmt.Errorf("game over")
-	}
-
+func (game *CallBreak) Next() int {
 	round := game.Rounds[game.RoundNumber]
 	trick := round.Tricks[round.TrickNumber]
-	return (trick.Lead + trick.Size) % NPlayers, nil
+	return (trick.Lead + trick.Size) % NPlayers
+}
+
+func (game *CallBreak) Call(token Token, call Call) {
+	return
 }

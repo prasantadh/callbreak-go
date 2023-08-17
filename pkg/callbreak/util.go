@@ -27,7 +27,7 @@ func GetValidMoves(game CallBreak) ([]deck.Card, error) {
 	leader := trick.Cards[trick.Lead]
 
 	const leadSuitWinners, leadSuit, turupWinners, playables = 0, 1, 2, 3
-	var validmoves [][]deck.Card
+	var validmoves [4][]deck.Card
 
 	for _, c := range hand {
 		if !c.Playable {

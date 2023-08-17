@@ -9,6 +9,7 @@ import (
 
 	"github.com/prasantadh/callbreak-go/pkg/callbreak"
 	"github.com/prasantadh/callbreak-go/pkg/deck"
+	autoplay "github.com/prasantadh/callbreak-go/pkg/player"
 	_ "github.com/prasantadh/callbreak-go/pkg/strategy"
 
 	log "github.com/sirupsen/logrus"
@@ -95,7 +96,7 @@ func getBreak(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := game.Play(token, deck.Card{Suit: suit, Rank: rank, Playable: true})
+	err := game.Break(token, deck.Card{Suit: suit, Rank: rank, Playable: true})
 	if err != nil {
 		failure(w, fmt.Sprintf("could not play card: %s", err))
 		return
@@ -127,6 +128,16 @@ func getRegister(w http.ResponseWriter, r *http.Request) {
 		failure(w, err.Error())
 		return
 	}
+	s, err := callbreak.GetStrategy(strategy)
+	if err != nil {
+		log.Error("could not assign a strategy to assistant")
+	}
+	config := autoplay.Config{
+		Game:     game,
+		Token:    player.Token,
+		Strategy: s,
+	}
+	autoplay.New(config)
 
 	response := Response{
 		Status: Success,
