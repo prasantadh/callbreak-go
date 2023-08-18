@@ -1,8 +1,6 @@
 package callbreak
 
 import (
-	"time"
-
 	"github.com/prasantadh/callbreak-go/pkg/deck"
 )
 
@@ -21,12 +19,8 @@ type CallBreak struct {
 	Stage        Stage              `json:"stage"`
 	TotalPlayers int                `json:"totalplayers"`
 	RoundNumber  int                `json:"roundnumber"`
-	// TotalPlayers and RoundNumber might be better as names
-	workPermit       chan struct{}
-	debug            bool
-	timeout          time.Duration
-	AssistMinTimeout time.Duration
-	AssistMaxTimeout time.Duration
+	workPermit   chan struct{}
+	debug        bool
 }
 
 type PlayerId struct {

@@ -1,6 +1,7 @@
 package callbreak
 
 import (
+	log "github.com/sirupsen/logrus"
 	"time"
 )
 
@@ -27,23 +28,24 @@ func (p *Assistant) Assist() {
 			continue
 		}
 
-		turn := current.Turn(&p.token)
-		next := current.Next()
+		me := current.Turn(&p.token)
 
 		// todo: before playing also have to check
 		// it was for the same round and the same trick
-		if turn == next && p.last.Turn(&p.token) == turn {
+		if current.Next() == me && p.last.Next() == me {
 			if current.Stage == DEALT {
 				call, err := p.strategy.Call(current)
 				if err != nil {
 					// TODO: log that autoplay failed
 				}
+				log.Infof("assistant took over: calling %d", call)
 				p.game.Call(p.token, call)
 			} else if current.Stage == CALLED {
 				card, err := p.strategy.Break(current)
 				if err != nil {
 					// TODO: log that autoplay failed
 				}
+				log.Infof("assistant took over: breaking %s", card)
 				p.game.Break(p.token, card)
 			}
 		}

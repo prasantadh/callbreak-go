@@ -11,12 +11,6 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-type PlayerConfig struct {
-	Name          string `json:"name"`
-	Strategy      string `json:"strategy"`
-	AssistTimeout time.Duration
-}
-
 /*
 assist_min_timeout: 500ms
 assis_max_timeout: 30s
@@ -31,13 +25,16 @@ players:
     strategy: basic
     assist_timeout: 100ms
 */
+
+type PlayerConfig struct {
+	Name     string        `json:"name"`
+	Strategy string        `json:"strategy"`
+	Timeout  time.Duration `json:"timeout"`
+}
+
 type Config struct {
 	Debug   bool `json:"debug,omitempty"`
-	Players []struct {
-		Name          string `json:"name"`
-		Strategy      string `json:"strategy"`
-        AssistTimeout time.Duration `json:"assist_timeout"`
-	}
+	Players []PlayerConfig
 }
 
 const (
@@ -45,34 +42,11 @@ const (
 	AssistMaxTimeout = 30 * time.Second
 )
 
-func New(config Config) (*CallBreak, error) {
-	if len(config.Players) > NPlayers {
-		return nil, fmt.Errorf("too many players, maximum %d allowed", NPlayers)
-	}
-
+func New() *CallBreak {
 	game := &CallBreak{
 		workPermit: make(chan struct{}, 1),
 	}
-
-	for _, player := range config.Players {
-		if player.AssistTimeout < AssistMinTimeout {
-			return nil,
-				fmt.Errorf("assist_min_timeout must be more than %s", AssistMinTimeout)
-		}
-		if err := VerifyStrategy(player.Strategy); err != nil {
-			return nil, fmt.Errorf("could not add player: %v", err)
-		}
-		if player.AssistTimeout > AssistMaxTimeout {
-			return nil,
-				fmt.Errorf("bottimeout must be less than %d", AssistMinTimeout)
-		}
-		_, err := game.AddPlayer(player.Name, player.Strategy, player.AssistTimeout)
-		if err != nil {
-			return nil, fmt.Errorf("could not add player: %v", err)
-		}
-	}
-
-	return game, nil
+	return game
 }
 
 // Get the current state of the game as visible to a token
@@ -102,7 +76,7 @@ func (game *CallBreak) Query(token Token) (*CallBreak, error) {
 
 // add a player to the game. returns an authentication token on success
 // else return error on failure
-func (game *CallBreak) AddPlayer(name, strategy string, timeout time.Duration) (PlayerId, error) {
+func (game *CallBreak) AddPlayer(config PlayerConfig) (PlayerId, error) {
 	// TODO eventually add a registry for assistant
 	// this works for now
 
@@ -113,7 +87,7 @@ func (game *CallBreak) AddPlayer(name, strategy string, timeout time.Duration) (
 		return PlayerId{}, fmt.Errorf("could not add players: table full")
 	}
 
-	s, err := GetStrategy(strategy)
+	s, err := GetStrategy(config.Strategy)
 	if err != nil {
 		return PlayerId{}, fmt.Errorf("could not set strategy: %v", err)
 	}
@@ -124,14 +98,21 @@ func (game *CallBreak) AddPlayer(name, strategy string, timeout time.Duration) (
 		return PlayerId{}, fmt.Errorf("could not generate a token")
 	}
 	token := Token(hex.EncodeToString(buffer))
-	playerid := PlayerId{Name: name, Token: token}
+	playerid := PlayerId{Name: config.Name, Token: token}
 
 	assistant := Assistant{strategy: s, game: game, last: game, token: token}
-	assistant.ticker = time.NewTicker(timeout)
+	if config.Timeout < AssistMinTimeout {
+		return PlayerId{}, fmt.Errorf("timeout must be more than %d", AssistMinTimeout)
+	}
+	if config.Timeout > AssistMaxTimeout {
+		return PlayerId{}, fmt.Errorf("timeout must be less than %d", AssistMaxTimeout)
+	}
+	assistant.ticker = time.NewTicker(config.Timeout)
 	go assistant.Assist()
 	game.Players[game.TotalPlayers] = playerid
 
-	log.Infof("add player %s with token %s", playerid.Name, playerid.Token)
+	log.Infof("add player: %s", playerid)
+	log.Infof("\tassistant timeout: %s", config.Timeout)
 	game.TotalPlayers += 1
 
 	if game.TotalPlayers == NPlayers {
