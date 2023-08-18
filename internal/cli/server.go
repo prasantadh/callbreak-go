@@ -3,10 +3,8 @@ package cli
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
+	"io"
 	"net/http"
-	"strconv"
-	"time"
 
 	"github.com/prasantadh/callbreak-go/pkg/callbreak"
 	"github.com/prasantadh/callbreak-go/pkg/deck"
@@ -18,7 +16,7 @@ import (
 
 var serverCommand = &cobra.Command{
 	Use:   "server",
-	Short: "callbreak server",
+	Short: "start a callbreak server for incoming players",
 	Long: `This subcommand allows you start a callbreak server that will listen
         to incoming connections from callbreak clients`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -32,129 +30,186 @@ func init() {
 
 var game *callbreak.CallBreak
 
-func failure(w http.ResponseWriter, data string) {
+var unsupported_method_response, _ = json.Marshal(Response{
+	Status: Failure,
+	Data:   "unsupported method: please use POST",
+})
+
+var game_nil_response, _ = json.Marshal(Response{
+	Status: Failure,
+	Data:   "no active game: create a new game with /new",
+})
+
+func handleNew(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		game = callbreak.New()
+		gamejson, _ := json.Marshal(game)
+		response := Response{
+			Status: Success,
+			Data:   string(gamejson),
+		}
+		data, _ := json.Marshal(response)
+		w.Write(data)
+	default:
+		log.Infof("/new request received with method %s", r.Method)
+		w.Write(unsupported_method_response)
+	}
+}
+
+func error_message(msg string, err error) []byte {
 	response := Response{
 		Status: Failure,
-		Data:   data,
+		Data:   msg + err.Error(),
 	}
-	b, _ := json.Marshal(response)
-	w.Write(b)
+	data, _ := json.Marshal(response)
+	return data
 }
 
-func success(w http.ResponseWriter, data any) {
-	response := Response{Status: Success, Data: data}
-	b, err := json.Marshal(response)
-	if err != nil {
-		panic("could not form sensible data to send")
+func handleCall(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "POST":
+		if game == nil {
+			w.Write(game_nil_response)
+			return
+		}
+
+		request := callRequest{}
+		body, _ := io.ReadAll(r.Body)
+		err := json.Unmarshal(body, &request)
+		if err != nil {
+			w.Write(error_message("invalid POST data: ", err))
+			return
+		}
+
+		err = game.Call(request.Token, request.Call)
+		if err != nil {
+			w.Write(error_message("call failed: ", err))
+			return
+		}
+
+		q, _ := game.Query(request.Token)
+		gamejson, _ := json.Marshal(q)
+		response := Response{
+			Status: Success,
+			Data:   string(gamejson),
+		}
+		data, _ := json.Marshal(response)
+		w.Write(data)
+	default:
+		w.Write(unsupported_method_response)
 	}
-	w.Write(b)
 }
 
-func getNew(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query().Get("config")
-	if len(q) == 0 {
-		failure(w, "field `config` is required")
-		return
-	}
+func handleBreak(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "POST":
+		if game == nil {
+			w.Write(game_nil_response)
+			return
+		}
 
-	var config callbreak.Config
-	err := json.Unmarshal([]byte(q), &config)
-	if err != nil {
-		failure(w, "could not parse config: "+err.Error())
-		return
+		request := breakRequest{}
+		body, _ := io.ReadAll(r.Body)
+		err := json.Unmarshal(body, &request)
+		if err != nil {
+			w.Write(error_message("invalid POST data: ", err))
+			return
+		}
+
+		card := deck.Card{Suit: request.Suit, Rank: request.Rank}
+		card.Playable = true // make it Playable
+		err = game.Break(request.Token, card)
+		if err != nil {
+			w.Write(error_message("break failed: ", err))
+			return
+		}
+
+		q, _ := game.Query(request.Token)
+		gamejson, _ := json.Marshal(q)
+		response := Response{
+			Status: Success,
+			Data:   string(gamejson),
+		}
+		data, _ := json.Marshal(response)
+		w.Write(data)
+	default:
+		w.Write(unsupported_method_response)
 	}
-	game, err = callbreak.New(config)
-	if err != nil {
-		failure(w, "could not create a game")
-		return
-	}
-	success(w, "a new game was created. <TODO> handle multple games")
 }
 
-func getCall(w http.ResponseWriter, r *http.Request) {
-	if game == nil {
-		failure(w, "no existing game. create a game with /new endpoint")
-		return
-	}
+func handleRegister(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "POST":
+		if game == nil {
+			w.Write(game_nil_response)
+			return
+		}
 
-	failure(w, "currently not implemented")
-	return
+		request := registerRequest{}
+		body, _ := io.ReadAll(r.Body)
+		err := json.Unmarshal(body, &request)
+		if err != nil {
+			w.Write(error_message("invalid POST data: ", err))
+			return
+		}
+
+		config := callbreak.PlayerConfig{
+			Name:     request.Name,
+			Strategy: request.Strategy,
+			Timeout:  request.Timeout,
+		}
+		playerid, err := game.AddPlayer(config)
+		if err != nil {
+			w.Write(error_message("register failed: ", err))
+			return
+		}
+
+		q, _ := game.Query(playerid.Token)
+		gamejson, _ := json.Marshal(q)
+		response := Response{
+			Status: Success,
+			Data:   string(gamejson),
+		}
+		data, _ := json.Marshal(response)
+		w.Write(data)
+	default:
+		w.Write(unsupported_method_response)
+	}
 }
 
-func getBreak(w http.ResponseWriter, r *http.Request) {
-	if game == nil {
-		failure(w, "no existing game. create a game with /new endpoint")
-		return
-	}
+func handleQuery(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "POST":
+		if game == nil {
+			w.Write(game_nil_response)
+			return
+		}
 
-	token := callbreak.Token(r.URL.Query().Get("token"))
-	if len(token) == 0 {
-		failure(w, "invalid request: missing `token` field")
-		return
-	}
+		request := queryRequest{}
+		body, _ := io.ReadAll(r.Body)
+		err := json.Unmarshal(body, &request)
+		if err != nil {
+			w.Write(error_message("invalid POST data: ", err))
+			return
+		}
 
-	t, _ := strconv.Atoi(r.URL.Query().Get("suit"))
-	suit := deck.Suit(t)
-	if suit < 1 || suit > 4 {
-		failure(w, "invalid suit")
-		return
-	}
+		q, err := game.Query(request.Token)
+		if err != nil {
+			w.Write(error_message("query failed: ", err))
+			return
+		}
 
-	t, _ = strconv.Atoi(r.URL.Query().Get("rank"))
-	rank := deck.Rank(t)
-	if rank < 1 || rank > 14 {
-		failure(w, "invalid rank")
-		return
+		gamejson, _ := json.Marshal(q)
+		response := Response{
+			Status: Success,
+			Data:   string(gamejson),
+		}
+		data, _ := json.Marshal(response)
+		w.Write(data)
+	default:
+		w.Write(unsupported_method_response)
 	}
-
-	err := game.Break(token, deck.Card{Suit: suit, Rank: rank, Playable: true})
-	if err != nil {
-		failure(w, fmt.Sprintf("could not play card: %s", err))
-		return
-	}
-
-	return
-}
-
-func getRegister(w http.ResponseWriter, r *http.Request) {
-	if game == nil {
-		failure(w, "no existing game. create a game with /new endpoint")
-		return
-	}
-
-	name := r.URL.Query().Get("name")
-	if len(name) == 0 {
-		failure(w, "invalid request: missing `name` field")
-		return
-	}
-
-	strategy := r.URL.Query().Get("strategy")
-	if len(name) == 0 {
-		failure(w, "invalid request: missing `strategy` field")
-		return
-	}
-
-	player, err := game.AddPlayer(name, strategy, 200*time.Millisecond)
-	if err != nil {
-		failure(w, err.Error())
-		return
-	}
-
-	response := Response{
-		Status: Success,
-		Data:   player,
-	}
-	b, _ := json.Marshal(response)
-	w.Write(b)
-	return
-}
-
-func getQuery(w http.ResponseWriter, r *http.Request) {
-	if game == nil {
-		failure(w, "no existing game. create a game with /new endpoint")
-		return
-	}
-	success(w, game)
 }
 
 // TODO: add a template for an experimental bot
@@ -163,10 +218,11 @@ func getQuery(w http.ResponseWriter, r *http.Request) {
 func runServer(cmd *cobra.Command, args []string) {
 
 	// 4 people can connect and play
-	http.HandleFunc("/new", getNew)
-	http.HandleFunc("/register", getRegister)
-	http.HandleFunc("/call", getCall)
-	http.HandleFunc("/break", getBreak)
+	http.HandleFunc("/new", handleNew)
+	http.HandleFunc("/register", handleRegister)
+	http.HandleFunc("/call", handleCall)
+	http.HandleFunc("/break", handleBreak)
+	http.HandleFunc("/query", handleQuery)
 
 	err := http.ListenAndServe(":3333", nil)
 	if errors.Is(err, http.ErrServerClosed) {
