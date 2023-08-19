@@ -19,7 +19,7 @@ const (
 
 type callRequest struct {
 	Token callbreak.Token `json:"token"`
-	Call  callbreak.Score `json:"call"`
+	Call  callbreak.Score `json:"call,string"`
 }
 
 type queryRequest struct {
@@ -28,8 +28,8 @@ type queryRequest struct {
 
 type breakRequest struct {
 	Token callbreak.Token `json:"token"`
-	Suit  deck.Suit       `json:"suit"`
-	Rank  deck.Rank       `json:"rank"`
+	Suit  deck.Suit       `json:"suit,string"`
+	Rank  deck.Rank       `json:"rank,string"`
 }
 
 type registerRequest callbreak.PlayerConfig

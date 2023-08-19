@@ -43,10 +43,6 @@ func New() *Renderer {
 	}
 }
 
-func (r *Renderer) SetToken(token callbreak.Token) {
-	r.token = token
-}
-
 func blank(repetition int) string {
 	return BgWhiteString(strings.Repeat(" ", 6*repetition))
 }
@@ -76,11 +72,7 @@ func ColoredHand(h callbreak.Hand) string {
 	return sb.String()
 }
 
-func (r *Renderer) Render(g callbreak.CallBreak) {
-	if r.token == "" {
-		fmt.Println("token not yet set!")
-		return
-	}
+func (r *Renderer) Render(g *callbreak.CallBreak, me int, msg string) {
 
 	// TODO: eventually only get one hand and display that
 	// for now display all hands
@@ -93,6 +85,13 @@ func (r *Renderer) Render(g callbreak.CallBreak) {
 	}
 
 	r.area.Clear()
+
+	var (
+		bottom = me
+		left   = (bottom + 1) % callbreak.NPlayers
+		top    = (left + 1) % callbreak.NPlayers
+		right  = (top + 1) % callbreak.NPlayers
+	)
 
 	sb := strings.Builder{}
 	addline := func(n int) {
@@ -130,15 +129,18 @@ func (r *Renderer) Render(g callbreak.CallBreak) {
 	sb.WriteString(BgWhiteString("Bots:  | bot0 | bot1 | bot2 | bot3 |"))
 	sb.WriteString(blank(9))
 	sb.WriteString("\n")
-	sb.WriteString(blank(1))
-	sb.WriteString(BgWhiteString(" |"))
-	// printing the scoreboard values
-	for _, score := range round.Scores {
-		sb.WriteString(BgWhiteString(fmt.Sprintf(" %2d/_ |", score)))
+	for r := 0; r <= g.RoundNumber; r++ {
+		sb.WriteString(blank(1))
+		sb.WriteString(BgWhiteString(" |"))
+		// printing the scoreboard values
+		round := g.Rounds[r]
+		for i := 0; i < callbreak.NPlayers; i++ {
+			s := fmt.Sprintf(" %2d/%1d |", round.Scores[i], round.Calls[i])
+			sb.WriteString(BgWhiteString(s))
+		}
+		sb.WriteString(blank(9))
+		sb.WriteString(BgWhiteString("\n"))
 	}
-	// the game board
-	sb.WriteString(blank(9))
-	sb.WriteString(BgWhiteString("\n"))
 	sb.WriteString(BgWhiteString("bot2⮕ "))
 	sb.WriteString(ColoredHand(hands[top]))
 	sb.WriteString(BgWhiteString("⬇ bot3"))
@@ -151,4 +153,5 @@ func (r *Renderer) Render(g callbreak.CallBreak) {
 	sb.WriteString(BgWhiteString("⬅ bot0"))
 	sb.WriteString("\n")
 	r.area.Update(sb.String())
+
 }

@@ -9,7 +9,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/prasantadh/callbreak-go/pkg/basicrenderer"
+	"atomicgo.dev/keyboard"
+	"atomicgo.dev/keyboard/keys"
+
+	// "github.com/prasantadh/callbreak-go/pkg/basicrenderer"
 	"github.com/prasantadh/callbreak-go/pkg/callbreak"
 	"github.com/prasantadh/callbreak-go/pkg/deck"
 	log "github.com/sirupsen/logrus"
@@ -33,6 +36,11 @@ func init() {
 var baseurl = "http://localhost:3333/"
 var token *callbreak.Token
 var me int
+
+type choice struct {
+	call callbreak.Score
+	card deck.Card
+}
 
 type response struct {
 	Status `json:"status"`
@@ -131,8 +139,8 @@ func postRegister(config *callbreak.PlayerConfig) string {
 }
 
 func postCall(token *callbreak.Token, call *callbreak.Score) string {
-	data := []byte(fmt.Sprintf(`{"token": "%v", "call": "%v"`, token, call))
-	response := post("call", data)
+	data := []byte(fmt.Sprintf(`{"token": "%s", "call": "%v"}`, *token, *call))
+	response := post(baseurl+"call", data)
 
 	if response.Status == Success {
 		return "call succeeded"
@@ -143,28 +151,19 @@ func postCall(token *callbreak.Token, call *callbreak.Score) string {
 func postBreak(token *callbreak.Token, card *deck.Card) string {
 	data := []byte(fmt.Sprintf(`{"token": "%v", "suit": "%v", "rank": "%v"}`,
 		*token, card.Suit, card.Rank))
-	response := post("break", data)
+	response := post(baseurl+"break", data)
 	if response.Status == Success {
 		return "break succeeded"
 	}
 	return "break failed: " + response.Data
 }
 
-func runClient(cmd *cobra.Command, args []string) {
-
-	// todo discard log for now. eventually put it in a file
-	// log.SetOutput(io.Discard)
-
-	err := postNew()
-	if err != nil {
-		panic(fmt.Errorf("failed to create a new game: %v", err))
-	}
-
+func registerPlayers() {
 	for i := 0; i < callbreak.NPlayers; i++ {
-		timeout := time.Millisecond * 500
+		timeout := time.Second
 		name := fmt.Sprintf("bot%d", i)
-		if i == 3 {
-			timeout = 3 * time.Second // TODO change this to 30s
+		if i == callbreak.NPlayers-1 {
+			timeout = 5 * time.Second // TODO change this to 30s
 			name = "me"
 		}
 		config := callbreak.PlayerConfig{
@@ -174,27 +173,101 @@ func runClient(cmd *cobra.Command, args []string) {
 		}
 		postRegister(&config)
 	}
+}
 
-	renderer := basicrenderer.New()
-	renderticker := time.NewTicker(200 * time.Millisecond)
-	call := callbreak.Score(0)
-	choice := deck.Card{}
-	msg := ""
+func runClient(cmd *cobra.Command, args []string) {
+	// todo discard log for now. eventually put it in a file
+	// log.SetOutput(io.Discard)
+
+	err := postNew()
+	if err != nil {
+		panic(fmt.Errorf("failed to create a new game: %v", err))
+	}
+	registerPlayers()
+
+	timeout := time.Second
+	renderticker := time.NewTicker(timeout)
+	// renderer := basicrenderer.New()
+
 	for {
+		// TODO: don't have to query that often, can reduce the query time
+		// also might have to add timeout to the queries even though
+		// there is also a default timeout on http.Client
 		<-renderticker.C
-		game := postQuery(token)
+		game = postQuery(token)
 		if game.Stage == callbreak.DONE {
 			break
 		}
-		log.Infof("next turn: %d\tmy turn: %d", game.Next(), me)
-		call, choice = renderer.Render(context.TODO(), *game, me, choice, msg)
-		if c := (deck.Card{}); c != choice {
-			msg = postCall(token, &call)
-		} else if c := callbreak.Score(0); c != call {
-			msg = postBreak(token, &choice)
-		} else {
-			msg = ""
+		// renderer.Render(game, me, "message area")
+
+		next := game.Next()
+		log.Infof("next player: %d, my turn: %d, stage: %d", game.Next(), me, game.Stage)
+		if next == me {
+			if game.Stage == callbreak.DEALT {
+				log.Info("I am attempting a call")
+				// TODO change this to a more reasonable number
+				ctx, cancel := context.WithTimeout(context.Background(), timeout)
+				keypressed := make(chan callbreak.Score)
+				go listenKeyboardCall(keypressed)
+				select {
+				case <-ctx.Done():
+					keyboard.SimulateKeyPress(keys.CtrlC)
+					log.Infof("timed out, re-rendering")
+				case call := <-keypressed:
+					log.Infof("sending user call to server: %d", call)
+					postCall(token, &call)
+				}
+				cancel()
+			} else if game.Stage == callbreak.CALLED {
+				choices, err := callbreak.GetValidMoves(game)
+				if err != nil {
+					panic(fmt.Errorf("could not get valid moves: %v", err))
+				}
+				log.Infof("valid moves: %s", choices)
+				ctx, cancel := context.WithTimeout(context.Background(), timeout)
+				keypressed := make(chan int)
+				go listenKeyboardBreak(keypressed, len(choices))
+				select {
+				case <-ctx.Done():
+					keyboard.SimulateKeyPress(keys.CtrlC)
+				case card := <-keypressed:
+					postBreak(token, &choices[card])
+				}
+				cancel()
+			}
 		}
 	}
+}
 
+func listenKeyboardCall(C chan callbreak.Score) {
+	keyboard.Listen(func(key keys.Key) (stop bool, err error) {
+		if key.Code == keys.CtrlC {
+			return true, nil
+		}
+		if key.Code == keys.RuneKey {
+			for v := 1; v < 8; v++ {
+				s := fmt.Sprint(v)
+				if s == key.String() {
+					C <- callbreak.Score(v)
+				}
+			}
+		}
+		return false, nil
+	})
+}
+
+func listenKeyboardBreak(C chan int, limit int) {
+	keyboard.Listen(func(key keys.Key) (stop bool, err error) {
+		if key.Code == keys.RuneKey {
+			for v := 1; v < limit; v++ {
+				s := fmt.Sprint(v)
+				if s == key.String() && v < limit {
+					C <- v
+				} else if s == key.String() {
+					C <- limit - 1
+				}
+			}
+		}
+		return true, nil
+	})
 }

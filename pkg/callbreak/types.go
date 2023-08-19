@@ -2,6 +2,7 @@ package callbreak
 
 import (
 	"github.com/prasantadh/callbreak-go/pkg/deck"
+	"time"
 )
 
 const (
@@ -9,6 +10,9 @@ const (
 	NPlayers = 4
 	NRounds  = 5
 	NTricks  = NCards / NPlayers
+
+	AssistMinTimeout = 50 * time.Millisecond
+	AssistMaxTimeout = 30 * time.Second
 )
 
 // CallBreak implements the callbreak game

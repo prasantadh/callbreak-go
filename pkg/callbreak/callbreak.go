@@ -11,21 +11,6 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-/*
-assist_min_timeout: 500ms
-assis_max_timeout: 30s
-players:
-  - name: bot0
-    strategy: basic
-    assist_timeout: 100ms
-  - name: bot1
-    strategy: basic
-    assist_timeout: 100ms
-  - name: bot3
-    strategy: basic
-    assist_timeout: 100ms
-*/
-
 type PlayerConfig struct {
 	Name     string        `json:"name"`
 	Strategy string        `json:"strategy"`
@@ -36,11 +21,6 @@ type Config struct {
 	Debug   bool `json:"debug,omitempty"`
 	Players []PlayerConfig
 }
-
-const (
-	AssistMinTimeout = 500 * time.Millisecond
-	AssistMaxTimeout = 30 * time.Second
-)
 
 func New() *CallBreak {
 	game := &CallBreak{
@@ -117,8 +97,7 @@ func (game *CallBreak) AddPlayer(config PlayerConfig) (PlayerId, error) {
 
 	if game.TotalPlayers == NPlayers {
 		game.Rounds[game.RoundNumber].deal()
-		// TODO: implement called
-		game.Stage = CALLED
+		game.Stage = DEALT
 	}
 
 	return playerid, nil
@@ -182,6 +161,7 @@ func (game *CallBreak) Break(token Token, card deck.Card) error {
 	log.Infof("server: trick: %s (size: %d lead: %d)",
 		trick.Cards, trick.Size, trick.Lead)
 	log.Infof("server: Hand: %s", round.Hands[player])
+	log.Infof("server: Calls: %v", round.Calls)
 
 	validMoves, err := GetValidMoves(game)
 	log.Infof("valid moves: %s", validMoves)
@@ -218,6 +198,7 @@ func (game *CallBreak) Break(token Token, card deck.Card) error {
 		if game.RoundNumber < NRounds {
 			round := &game.Rounds[game.RoundNumber]
 			round.deal()
+			game.Stage = DEALT
 			round.Tricks[round.TrickNumber].Lead = game.RoundNumber % NPlayers
 		} else {
 			log.Infof("Round Scores: %v", round.Scores)
@@ -250,20 +231,27 @@ func (game *CallBreak) Call(token Token, call Score) error {
 	game.workPermit <- struct{}{}
 	defer func() { <-game.workPermit }()
 
-	turn := game.Turn(&token)
-	if turn == NPlayers {
-		return fmt.Errorf("invalid token")
-	}
+	round := &game.Rounds[game.RoundNumber]
+	trick := &round.Tricks[round.TrickNumber]
 
 	if game.Stage != DEALT {
 		return fmt.Errorf("not a valid move at current stage")
 	}
 
 	next := game.Next()
+	turn := game.Turn(&token)
 	if next != turn {
 		return fmt.Errorf("not your turn")
 	}
 
-	game.Rounds[game.RoundNumber].Calls[turn] = call
+	if call < 1 || call > 8 {
+		return fmt.Errorf("calls must be between 1 and 8")
+	}
+
+	round.Calls[next] = call
+	trick.Size = (trick.Size + 1) % NPlayers
+	if trick.Size == 0 {
+		game.Stage = CALLED
+	}
 	return nil
 }
