@@ -12,7 +12,7 @@ import (
 	"atomicgo.dev/keyboard"
 	"atomicgo.dev/keyboard/keys"
 
-	// "github.com/prasantadh/callbreak-go/pkg/basicrenderer"
+	"github.com/prasantadh/callbreak-go/pkg/basicrenderer"
 	"github.com/prasantadh/callbreak-go/pkg/callbreak"
 	"github.com/prasantadh/callbreak-go/pkg/deck"
 	log "github.com/sirupsen/logrus"
@@ -148,10 +148,13 @@ func postCall(token *callbreak.Token, call *callbreak.Score) string {
 	return "call failed: " + response.Data
 }
 
-func postBreak(token *callbreak.Token, card *deck.Card) string {
-	data := []byte(fmt.Sprintf(`{"token": "%v", "suit": "%v", "rank": "%v"}`,
-		*token, card.Suit, card.Rank))
-	response := post(baseurl+"break", data)
+func postBreak(token *callbreak.Token, card deck.Card) string {
+	data := breakRequest{Token: *token, Card: card}
+	request, err := json.Marshal(data)
+	if err != nil {
+		panic(fmt.Errorf("could not marshal card to break: %v", err))
+	}
+	response := post(baseurl+"break", request)
 	if response.Status == Success {
 		return "break succeeded"
 	}
@@ -160,7 +163,7 @@ func postBreak(token *callbreak.Token, card *deck.Card) string {
 
 func registerPlayers() {
 	for i := 0; i < callbreak.NPlayers; i++ {
-		timeout := time.Second
+		timeout := 50 * time.Millisecond
 		name := fmt.Sprintf("bot%d", i)
 		if i == callbreak.NPlayers-1 {
 			timeout = 5 * time.Second // TODO change this to 30s
@@ -177,7 +180,7 @@ func registerPlayers() {
 
 func runClient(cmd *cobra.Command, args []string) {
 	// todo discard log for now. eventually put it in a file
-	// log.SetOutput(io.Discard)
+	log.SetOutput(io.Discard)
 
 	err := postNew()
 	if err != nil {
@@ -187,7 +190,7 @@ func runClient(cmd *cobra.Command, args []string) {
 
 	timeout := time.Second
 	renderticker := time.NewTicker(timeout)
-	// renderer := basicrenderer.New()
+	renderer := basicrenderer.New()
 
 	for {
 		// TODO: don't have to query that often, can reduce the query time
@@ -198,20 +201,20 @@ func runClient(cmd *cobra.Command, args []string) {
 		if game.Stage == callbreak.DONE {
 			break
 		}
-		// renderer.Render(game, me, "message area")
+		renderer.Render(game, me, "message area")
 
 		next := game.Next()
 		log.Infof("next player: %d, my turn: %d, stage: %d", game.Next(), me, game.Stage)
 		if next == me {
 			if game.Stage == callbreak.DEALT {
-				log.Info("I am attempting a call")
+				log.Info("My Call: ")
 				// TODO change this to a more reasonable number
 				ctx, cancel := context.WithTimeout(context.Background(), timeout)
 				keypressed := make(chan callbreak.Score)
 				go listenKeyboardCall(keypressed)
 				select {
 				case <-ctx.Done():
-					keyboard.SimulateKeyPress(keys.CtrlC)
+					keyboard.SimulateKeyPress(keys.Esc)
 					log.Infof("timed out, re-rendering")
 				case call := <-keypressed:
 					log.Infof("sending user call to server: %d", call)
@@ -219,6 +222,7 @@ func runClient(cmd *cobra.Command, args []string) {
 				}
 				cancel()
 			} else if game.Stage == callbreak.CALLED {
+				log.Info("My Break: ")
 				choices, err := callbreak.GetValidMoves(game)
 				if err != nil {
 					panic(fmt.Errorf("could not get valid moves: %v", err))
@@ -229,9 +233,11 @@ func runClient(cmd *cobra.Command, args []string) {
 				go listenKeyboardBreak(keypressed, len(choices))
 				select {
 				case <-ctx.Done():
-					keyboard.SimulateKeyPress(keys.CtrlC)
+					keyboard.SimulateKeyPress(keys.Esc)
 				case card := <-keypressed:
-					postBreak(token, &choices[card])
+					log.Infof("playing %s", choices[card])
+					s := postBreak(token, choices[card])
+					log.Infof(s)
 				}
 				cancel()
 			}
@@ -241,11 +247,11 @@ func runClient(cmd *cobra.Command, args []string) {
 
 func listenKeyboardCall(C chan callbreak.Score) {
 	keyboard.Listen(func(key keys.Key) (stop bool, err error) {
-		if key.Code == keys.CtrlC {
+		if key.Code == keys.Esc {
 			return true, nil
 		}
 		if key.Code == keys.RuneKey {
-			for v := 1; v < 8; v++ {
+			for v := 1; v <= 8; v++ {
 				s := fmt.Sprint(v)
 				if s == key.String() {
 					C <- callbreak.Score(v)
@@ -258,13 +264,14 @@ func listenKeyboardCall(C chan callbreak.Score) {
 
 func listenKeyboardBreak(C chan int, limit int) {
 	keyboard.Listen(func(key keys.Key) (stop bool, err error) {
+		if key.Code == keys.Esc {
+			return true, nil
+		}
 		if key.Code == keys.RuneKey {
-			for v := 1; v < limit; v++ {
+			for v := 1; v <= limit; v++ {
 				s := fmt.Sprint(v)
-				if s == key.String() && v < limit {
-					C <- v
-				} else if s == key.String() {
-					C <- limit - 1
+				if s == key.String() {
+					C <- v - 1
 				}
 			}
 		}

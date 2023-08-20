@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/prasantadh/callbreak-go/pkg/deck"
-	log "github.com/sirupsen/logrus"
 )
 
 // return a slice containing cards that can be played
@@ -15,10 +14,6 @@ func GetValidMoves(game *CallBreak) ([]deck.Card, error) {
 	trick := round.Tricks[round.TrickNumber]
 	next := (trick.Lead + trick.Size) % NPlayers
 	hand := round.Hands[next]
-	log.Infof("getting valid moves")
-	log.Infof("\tNext: %d", next)
-	log.Infof("\tHand: %s", hand)
-	log.Infof("\tTrick: %v", trick)
 
 	if !hand.IsValid() || !hand.HasPlayable() || trick.Size >= NPlayers {
 		return nil, fmt.Errorf("invalid hand or trick")

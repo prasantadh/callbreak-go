@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/prasantadh/callbreak-go/pkg/callbreak"
-	"github.com/prasantadh/callbreak-go/pkg/deck"
 	_ "github.com/prasantadh/callbreak-go/pkg/strategy"
 
 	log "github.com/sirupsen/logrus"
@@ -113,13 +112,13 @@ func handleBreak(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		err := json.Unmarshal(body, &request)
 		if err != nil {
+			log.Infof("break failed: %v", err)
 			w.Write(error_message("invalid POST data: ", err))
 			return
 		}
 
-		card := deck.Card{Suit: request.Suit, Rank: request.Rank}
-		card.Playable = true // make it Playable
-		err = game.Break(request.Token, card)
+		request.Card.Playable = true // make it Playable
+		err = game.Break(request.Token, request.Card)
 		if err != nil {
 			w.Write(error_message("break failed: ", err))
 			return

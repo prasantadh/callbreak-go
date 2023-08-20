@@ -33,6 +33,9 @@ func New() *CallBreak {
 func (game *CallBreak) Query(token Token) (*CallBreak, error) {
 	// todo: currently returns tricks for all players.
 	// consider sending out only the tricks won by current player
+	game.workPermit <- struct{}{}
+	defer func() { <-game.workPermit }()
+
 	me := game.Turn(&token)
 	if me == NPlayers {
 		return nil, fmt.Errorf("unauthorized token")
@@ -80,7 +83,7 @@ func (game *CallBreak) AddPlayer(config PlayerConfig) (PlayerId, error) {
 	token := Token(hex.EncodeToString(buffer))
 	playerid := PlayerId{Name: config.Name, Token: token}
 
-	assistant := Assistant{strategy: s, game: game, last: game, token: token}
+	assistant := Assistant{strategy: s, game: game, token: token}
 	if config.Timeout < AssistMinTimeout {
 		return PlayerId{}, fmt.Errorf("timeout must be more than %d", AssistMinTimeout)
 	}
@@ -131,10 +134,6 @@ func (game *CallBreak) Break(token Token, card deck.Card) error {
 	game.workPermit <- struct{}{}
 	defer func() { <-game.workPermit }()
 
-	// assert Play is currently valid move
-	//      players have been dealt the cards
-	//      players have made the calls
-	//      there is an active round and active trick
 	log.Infof("server: player %s attempted play with %s", token[:4], card)
 	player := game.Turn(&token)
 	if player == NPlayers {
@@ -164,7 +163,6 @@ func (game *CallBreak) Break(token Token, card deck.Card) error {
 	log.Infof("server: Calls: %v", round.Calls)
 
 	validMoves, err := GetValidMoves(game)
-	log.Infof("valid moves: %s", validMoves)
 	if err != nil {
 		return fmt.Errorf("could not get valid moves: %v", err)
 	}

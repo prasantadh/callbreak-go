@@ -28,8 +28,7 @@ type queryRequest struct {
 
 type breakRequest struct {
 	Token callbreak.Token `json:"token"`
-	Suit  deck.Suit       `json:"suit,string"`
-	Rank  deck.Rank       `json:"rank,string"`
+	Card  deck.Card       `json:"card"`
 }
 
 type registerRequest callbreak.PlayerConfig

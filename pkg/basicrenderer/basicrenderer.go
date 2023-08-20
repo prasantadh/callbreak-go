@@ -10,14 +10,6 @@ import (
 	"github.com/prasantadh/callbreak-go/pkg/deck"
 )
 
-var (
-	// TODO: this order will change when round is implemented
-	left   = 1
-	top    = 2
-	right  = 3
-	bottom = 0
-)
-
 var RedString func(a ...interface{}) string
 var BlackString func(a ...interface{}) string
 var FaintString func(a ...interface{}) string
@@ -151,6 +143,37 @@ func (r *Renderer) Render(g *callbreak.CallBreak, me int, msg string) {
 	sb.WriteString(BgWhiteString("bot1⬆ "))
 	sb.WriteString(ColoredHand(hands[bottom]))
 	sb.WriteString(BgWhiteString("⬅ bot0"))
+	sb.WriteString("\n")
+	// render either call or break options here
+	if g.Next() == me {
+		if g.Stage == callbreak.DEALT {
+			sb.WriteString(BgWhiteString("CALL: "))
+			for i := 1; i <= 8; i++ {
+				sb.WriteString(BgWhiteString(fmt.Sprintf("   %d  ", i)))
+			}
+			sb.WriteString(blank(6))
+		} else if g.Stage == callbreak.CALLED {
+			validMoves, _ := callbreak.GetValidMoves(g)
+			sb.WriteString(BgWhiteString("PLAY: "))
+			for i := 0; i < callbreak.NTricks; i += 1 {
+				c := hands[bottom][i]
+				found := false
+				for j, card := range validMoves {
+					if c == card {
+						s := fmt.Sprintf("   %d  ", j+1)
+						sb.WriteString(BgWhiteString(s))
+						found = true
+					}
+				}
+				if !found {
+					sb.WriteString(blank(1))
+				}
+			}
+			sb.WriteString(blank(1))
+		}
+	} else {
+		sb.WriteString(blank(15))
+	}
 	sb.WriteString("\n")
 	r.area.Update(sb.String())
 
