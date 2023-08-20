@@ -91,21 +91,37 @@ func (r *Renderer) Render(g *callbreak.CallBreak, me int, msg string) {
 		sb.WriteString(blank(4))
 		if n == 6 {
 			// sb.WriteString(ColoredCard(trick[left]))
-			sb.WriteString(ColoredCard(trick[left]))
+			if trick[left] != (deck.Card{Playable: true}) {
+				sb.WriteString(ColoredCard(trick[left]))
+			} else {
+				sb.WriteString(BgWhiteString("______"))
+			}
 		} else {
 			sb.WriteString(blank(1))
 		}
 		sb.WriteString(blank(1))
 		if n == 4 {
-			sb.WriteString(ColoredCard(trick[top]))
+			if trick[top] != (deck.Card{Playable: true}) {
+				sb.WriteString(ColoredCard(trick[top]))
+			} else {
+				sb.WriteString(BgWhiteString("______"))
+			}
 		} else if n == 8 {
-			sb.WriteString(ColoredCard(trick[bottom]))
+			if trick[bottom] != (deck.Card{Playable: true}) {
+				sb.WriteString(ColoredCard(trick[bottom]))
+			} else {
+				sb.WriteString(BgWhiteString("______"))
+			}
 		} else {
 			sb.WriteString(blank(1))
 		}
 		sb.WriteString(blank(1))
 		if n == 6 {
-			sb.WriteString(ColoredCard(trick[right]))
+			if trick[bottom] != (deck.Card{Playable: true}) {
+				sb.WriteString(ColoredCard(trick[bottom]))
+			} else {
+				sb.WriteString(BgWhiteString("______"))
+			}
 		} else {
 			sb.WriteString(blank(1))
 		}
