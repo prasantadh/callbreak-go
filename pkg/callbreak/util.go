@@ -23,6 +23,9 @@ func GetValidMoves(game *CallBreak) ([]deck.Card, error) {
 		return hand.Playables(), nil
 	}
 
+	if trick.Winner() == -1 {
+		return nil, fmt.Errorf("trick is in invalid state")
+	}
 	winner := trick.Cards[trick.Winner()]
 	leader := trick.Cards[trick.Lead]
 
