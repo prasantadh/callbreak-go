@@ -14,3 +14,7 @@ go install github.com/prasantadh/callbreak-go/cmd/callbreak-go@latest
 ~/go/bin/callbreak-go client
 ```
 
+## Credits
+This project is a go implementation of initial work with python at
+[callbreak](https://github.com/prasantadh/callbreak)
+
