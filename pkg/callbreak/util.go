@@ -15,12 +15,15 @@ func GetValidMoves(game *CallBreak) ([]deck.Card, error) {
 	next := (trick.Lead + trick.Size) % NPlayers
 	hand := round.Hands[next]
 
-	if !hand.IsValid() || !hand.HasPlayable() || trick.Size >= NPlayers {
-		return nil, fmt.Errorf("invalid hand or trick")
+	if !hand.IsValid() || !hand.HasPlayable() {
+		return nil, fmt.Errorf("invalid hand")
 	}
 
-	if trick.Size == 0 {
+	switch trick.Size {
+	case 0:
 		return hand.Playables(), nil
+	case NPlayers:
+		return nil, fmt.Errorf("trick full, no playable moves")
 	}
 
 	if trick.Winner() == -1 {
