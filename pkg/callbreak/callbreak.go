@@ -26,6 +26,7 @@ func New() *CallBreak {
 	game := &CallBreak{
 		workPermit: make(chan struct{}, 1),
 	}
+	go game.updateStage()
 	return game
 }
 
@@ -60,8 +61,6 @@ func (game *CallBreak) Query(token Token) (*CallBreak, error) {
 // add a player to the game. returns an authentication token on success
 // else return error on failure
 func (game *CallBreak) AddPlayer(config PlayerConfig) (PlayerId, error) {
-	// TODO eventually add a registry for assistant
-	// this works for now
 
 	game.workPermit <- struct{}{}
 	defer func() { <-game.workPermit }()
@@ -83,6 +82,8 @@ func (game *CallBreak) AddPlayer(config PlayerConfig) (PlayerId, error) {
 	token := Token(hex.EncodeToString(buffer))
 	playerid := PlayerId{Name: config.Name, Token: token}
 
+	// TODO eventually add a registry for assistant
+	// this works for now
 	assistant := Assistant{strategy: s, game: game, token: token}
 	if config.Timeout < AssistMinTimeout {
 		return PlayerId{}, fmt.Errorf("timeout must be more than %d", AssistMinTimeout)
@@ -97,11 +98,6 @@ func (game *CallBreak) AddPlayer(config PlayerConfig) (PlayerId, error) {
 	log.Infof("add player: %s", playerid)
 	log.Infof("\tassistant timeout: %s", config.Timeout)
 	game.TotalPlayers += 1
-
-	if game.TotalPlayers == NPlayers {
-		game.Rounds[game.RoundNumber].deal()
-		game.Stage = DEALT
-	}
 
 	return playerid, nil
 }
@@ -128,6 +124,60 @@ func (round *Round) deal() {
 	}
 }
 
+// fires periodically to update the stage of the game
+func (game *CallBreak) updateStage() {
+	// TODO This might need to be configurable for the speed of the game
+	ticker := time.NewTicker(time.Second)
+	for {
+		<-ticker.C
+		game.workPermit <- struct{}{}
+		if game.Stage == DONE {
+			break
+		}
+
+		round := &game.Rounds[game.RoundNumber]
+		trick := &round.Tricks[round.TrickNumber]
+		switch game.Stage {
+		case NOTFULL:
+			if game.TotalPlayers == NPlayers {
+				round.deal()
+				game.Stage = DEALT
+			}
+
+		case DEALT:
+			if trick.Size == NPlayers {
+				trick.Size = 0
+				game.Stage = CALLED
+			}
+
+		case CALLED:
+			if trick.Size == NPlayers { // update results
+				winner := trick.Winner()
+				round.Scores[winner] += 1
+				round.TrickNumber += 1
+				if round.TrickNumber < NTricks {
+					round.Tricks[round.TrickNumber].Lead = winner
+				}
+			}
+
+			// next round
+			if round.TrickNumber == NTricks {
+				game.RoundNumber += 1
+				if game.RoundNumber < NRounds {
+					round := &game.Rounds[game.RoundNumber]
+					round.deal()
+					game.Stage = DEALT
+					round.Tricks[round.TrickNumber].Lead = game.RoundNumber % NPlayers
+				} else {
+					log.Infof("Round Scores: %v", round.Scores)
+					game.Stage = DONE
+				}
+			}
+		}
+		<-game.workPermit
+	}
+}
+
 // the next player in line playes the card c
 func (game *CallBreak) Break(token Token, card deck.Card) error {
 
@@ -145,8 +195,6 @@ func (game *CallBreak) Break(token Token, card deck.Card) error {
 	}
 
 	round := &game.Rounds[game.RoundNumber]
-	// the TrickNumber should always be valid for current game
-	// or the game is in inconsistent state
 	trick := &round.Tricks[round.TrickNumber]
 	next := (trick.Lead + trick.Size) % NPlayers
 
@@ -181,29 +229,6 @@ func (game *CallBreak) Break(token Token, card deck.Card) error {
 	}
 	log.Infof("server: move succeeded: trick: %v", *trick)
 
-	if trick.Size == NPlayers { // update results
-		winner := trick.Winner()
-		round.Scores[winner] += 1
-		round.TrickNumber += 1
-		if round.TrickNumber < NTricks {
-			round.Tricks[round.TrickNumber].Lead = winner
-		}
-	}
-
-	// next round
-	if round.TrickNumber == NTricks {
-		game.RoundNumber += 1
-		if game.RoundNumber < NRounds {
-			round := &game.Rounds[game.RoundNumber]
-			round.deal()
-			game.Stage = DEALT
-			round.Tricks[round.TrickNumber].Lead = game.RoundNumber % NPlayers
-		} else {
-			log.Infof("Round Scores: %v", round.Scores)
-			game.Stage = DONE
-		}
-	}
-
 	return nil
 }
 
@@ -222,6 +247,9 @@ func (game *CallBreak) Turn(token *Token) int {
 func (game *CallBreak) Next() int {
 	round := game.Rounds[game.RoundNumber]
 	trick := round.Tricks[round.TrickNumber]
+	if trick.Size == NPlayers {
+		return NPlayers
+	}
 	return (trick.Lead + trick.Size) % NPlayers
 }
 
@@ -247,9 +275,7 @@ func (game *CallBreak) Call(token Token, call Score) error {
 	}
 
 	round.Calls[next] = call
-	trick.Size = (trick.Size + 1) % NPlayers
-	if trick.Size == 0 {
-		game.Stage = CALLED
-	}
+	trick.Size += 1
+
 	return nil
 }
