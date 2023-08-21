@@ -13,7 +13,6 @@ import (
 	cb "github.com/prasantadh/callbreak-go/pkg/callbreak"
 	"github.com/prasantadh/callbreak-go/pkg/deck"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/exp/slices"
 )
 
 var (
@@ -55,8 +54,6 @@ func (r *Basic) coloredCard(c deck.Card) string {
 	s := fmt.Sprintf(" %s %s  ", &c.Suit, &c.Rank)
 	if len(r.validmoves) > 0 && c == r.validmoves[r.choice] {
 		s = fmt.Sprintf("[%s %s ]", &c.Suit, &c.Rank)
-	} else if slices.Contains(r.validmoves, c) {
-		s = fmt.Sprintf("(%s %s )", &c.Suit, &c.Rank)
 	}
 	if c.Suit == deck.Hukum || c.Suit == deck.Chidi {
 		if c.Playable {
@@ -174,22 +171,42 @@ func (r *Basic) renderTableMid(game cb.CallBreak, n int) string {
 	return sb.String()
 }
 
-func (r *Basic) renderTable(game cb.CallBreak) string {
-	round := game.Rounds[game.RoundNumber]
-	hands := round.Hands
+func (r *Basic) renderTableTop(game cb.CallBreak) string {
+	round := &game.Rounds[game.RoundNumber]
 	var sb strings.Builder
-	sb.WriteString(BgWhiteString("bot2⮕ "))
-	sb.WriteString(r.coloredHand(hands[top]))
-	sb.WriteString(BgWhiteString("⬇ bot3"))
+	sb.WriteString(r.blank(7))
+	sb.WriteString(BgWhiteString("bot2⬇ "))
+	sb.WriteString(r.blank(7))
 	sb.WriteString("\n")
+	sb.WriteString(BgWhiteString("⬇ bot1"))
+	sb.WriteString(r.coloredHand(round.Hands[top]))
+	sb.WriteString(BgWhiteString("bot3⬇ "))
+	sb.WriteString("\n")
+	return sb.String()
+}
+
+func (r *Basic) renderTableBottom(game cb.CallBreak) string {
+	round := &game.Rounds[game.RoundNumber]
+	var sb strings.Builder
+	sb.WriteString(r.blank(1))
+	sb.WriteString(r.coloredHand(round.Hands[bottom]))
+	sb.WriteString(r.blank(1))
+	sb.WriteString("\n")
+	sb.WriteString(r.blank(7))
+	sb.WriteString(BgWhiteString("  me  "))
+	sb.WriteString(r.blank(7))
+	sb.WriteString("\n")
+	return sb.String()
+}
+
+func (r *Basic) renderTable(game cb.CallBreak) string {
+	var sb strings.Builder
+	sb.WriteString(r.renderTableTop(game))
 	for i := 0; i < cb.NTricks; i++ {
 		s := r.renderTableMid(game, i)
 		sb.WriteString(s)
 	}
-	sb.WriteString(BgWhiteString("bot1⬆ "))
-	sb.WriteString(r.coloredHand(hands[bottom]))
-	sb.WriteString(BgWhiteString("⬅ bot0"))
-	sb.WriteString("\n")
+	sb.WriteString(r.renderTableBottom(game))
 	return sb.String()
 }
 
@@ -246,7 +263,8 @@ func (r *Basic) Render(update <-chan cb.CallBreak, me int) {
 			sb.WriteString(r.coloredCard(r.validmoves[r.choice]))
 			sb.WriteString(BgWhiteString(" -> [Enter]     "))
 			sb.WriteString(r.blank(9))
-			sb.WriteString("\n")
+		} else {
+			sb.WriteString(r.blank(15))
 		}
 		r.area.Clear()
 		r.area.Update(sb.String())
