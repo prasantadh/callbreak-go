@@ -155,7 +155,7 @@ func postBreak(token *callbreak.Token, card deck.Card) string {
 
 func registerPlayers() {
 	for i := 0; i < callbreak.NPlayers; i++ {
-		timeout := 50 * time.Millisecond
+		timeout := time.Second
 		name := fmt.Sprintf("bot%d", i)
 		if i == callbreak.NPlayers-1 {
 			timeout = 5 * time.Second // TODO change this to 30s
