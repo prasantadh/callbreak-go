@@ -1,26 +1,16 @@
+This software is currently in alpha version. Program might crash
+for players and there might be api breaking changes for developers.
+Issues and pull requests are welcome.
+
 ## Build and Usage (Installation)
 
+This repo depends on golang so you will need golang installed.
 ```bash
-go build ./cmd/callbreak-go
-./callbreak-go
+## install the package
+go install github.com/prasantadh/callbreak-go/cmd/callbreak-go@latest
+## run the server
+~/go/bin/callbreak-go server
+## on a different terminal window, use the client to connect and play
+~/go/bin/callbreak-go client
 ```
 
-## API 
-
-### Request Endpoints
-
-Name                     | Description
--------------------------|--------------------------------------
-new     | Restart a game. In doing so, your last game will no longer exist. TODO: choose mode: single/multi/debug
-query   | Query the current game _optionally_ indexed by `roundnumber` and `tricknumber`
-call    | Make your call (the call in callbreak) for the round.
-break   | Play a card from your hand onto the table. The card is the json from of `deck.Card`
-register| Register a player to the game. On success, response `data` has authentication token
-
-
-### Response Values
-
-Name        |  Description
-------------|-----------------------------------------------------
-status      | Specifies if the request was successfully executed. Returns `success` or `failure`. If it fails, `data` returns an explanation.
-data        | When applicable, return data that was requested.
