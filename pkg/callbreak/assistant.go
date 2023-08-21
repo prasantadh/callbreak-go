@@ -53,17 +53,23 @@ func (p *Assistant) Assist() {
 			if current.Stage == DEALT {
 				call, err := p.strategy.Call(current)
 				if err != nil {
-					log.Infof("auto call failed for assistant %d", me)
+					log.Infof("call strategy failed for assistant %d", me)
 				}
 				log.Infof("assistant %d took over: calling %d", me, call)
-				p.game.Call(p.token, call)
+				err = p.game.Call(p.token, call)
+				if err != nil {
+					log.Infof("auto call failed for assistant %d", me)
+				}
 			} else if current.Stage == CALLED {
 				card, err := p.strategy.Break(current)
 				if err != nil {
-					log.Infof("auto play failed for assistant %d", me)
+					log.Infof("break strategy failed for assistant %d", me)
 				}
 				log.Infof("assistant %d took over: breaking %s", me, card)
-				p.game.Break(p.token, card)
+				err = p.game.Break(p.token, card)
+				if err != nil {
+					log.Infof("auto break failed for assistant %d", me)
+				}
 			}
 		}
 	}
