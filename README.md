@@ -14,7 +14,10 @@ go install github.com/prasantadh/callbreak-go/cmd/callbreak-go@latest
 ~/go/bin/callbreak-go client
 ```
 
+## Rules
+There are primarily two moves: call and break. The detailed rules are 
+documented in [docs/rules.md](docs/rules.md).
+
 ## Credits
 This project is a go implementation of initial work with python at
 [callbreak](https://github.com/prasantadh/callbreak)
-
