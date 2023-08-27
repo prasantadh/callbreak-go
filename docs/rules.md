@@ -2,6 +2,14 @@
 It is a game of call and break. You call how many tricks you can win. You
 attempt to win your calls and break others' calls.
 
+
+```txt
+Glossary:
+Hand: The cards that a player has.
+Trick: A collection of 4 cards played face up from each player.
+In Nepali, these would both be called *haat*.
+```
+
 ### Objective of the Game
 Be the player with the highest score at the end of the game.
 
@@ -38,9 +46,3 @@ subsequent players MUST play the card in the following order of priority.:
 A, K, Q, X (10), 9, 8, 7, 6, 5, 4, 3, 2. Spade suit wins over all other suits.
 Spade can only be played if the leading suit is either Spade or not available.
 All other suits lose to the leading suit irrespective of their rank.
-
-```txt
-Hand: The cards that a player has.
-Trick: A collection of 4 cards played face up from each player.
-In Nepali, these would both be called *haat*.
-```
