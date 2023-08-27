@@ -94,10 +94,10 @@ func (r *Basic) renderScoreboard(game cb.CallBreak) string {
 	var sb strings.Builder
 	sb.WriteString(BgWhiteString("ScoreBoard  "))
 	sb.WriteString(r.blank(13))
-	sb.WriteString("\n")
+	sb.WriteString("\r\n")
 	sb.WriteString(BgWhiteString("Bots:  |  me  | bot1 | bot2 | bot3 |"))
 	sb.WriteString(r.blank(9))
-	sb.WriteString("\n")
+	sb.WriteString("\r\n")
 	total := [cb.NPlayers]float32{}
 	for i := 0; i <= game.RoundNumber; i++ {
 		sb.WriteString(r.blank(1))
@@ -114,14 +114,14 @@ func (r *Basic) renderScoreboard(game cb.CallBreak) string {
 			}
 		}
 		sb.WriteString(r.blank(9))
-		sb.WriteString(BgWhiteString("\n"))
+		sb.WriteString(BgWhiteString("\r\n"))
 	}
 	s := fmt.Sprintf("| % 2.1f | % 2.1f | % 2.1f | % 2.1f |",
 		total[0], total[1], total[2], total[3])
 	sb.WriteString(BgWhiteString("Total: "))
 	sb.WriteString(BgWhiteString(s))
 	sb.WriteString(r.blank(9))
-	sb.WriteString("\n")
+	sb.WriteString("\r\n")
 	return sb.String()
 }
 
@@ -167,7 +167,7 @@ func (r *Basic) renderTableMid(game cb.CallBreak, n int) string {
 	}
 	sb.WriteString(r.blank(4))
 	sb.WriteString(r.coloredCard(hands[right][n]))
-	sb.WriteString("\n")
+	sb.WriteString("\r\n")
 	return sb.String()
 }
 
@@ -177,11 +177,11 @@ func (r *Basic) renderTableTop(game cb.CallBreak) string {
 	sb.WriteString(r.blank(7))
 	sb.WriteString(BgWhiteString("bot2⬇ "))
 	sb.WriteString(r.blank(7))
-	sb.WriteString("\n")
+	sb.WriteString("\r\n")
 	sb.WriteString(BgWhiteString("⬇ bot1"))
 	sb.WriteString(r.coloredHand(round.Hands[top]))
 	sb.WriteString(BgWhiteString("bot3⬇ "))
-	sb.WriteString("\n")
+	sb.WriteString("\r\n")
 	return sb.String()
 }
 
@@ -191,11 +191,11 @@ func (r *Basic) renderTableBottom(game cb.CallBreak) string {
 	sb.WriteString(r.blank(1))
 	sb.WriteString(r.coloredHand(round.Hands[bottom]))
 	sb.WriteString(r.blank(1))
-	sb.WriteString("\n")
+	sb.WriteString("\r\n")
 	sb.WriteString(r.blank(7))
 	sb.WriteString(BgWhiteString("  me  "))
 	sb.WriteString(r.blank(7))
-	sb.WriteString("\n")
+	sb.WriteString("\r\n")
 	return sb.String()
 }
 
