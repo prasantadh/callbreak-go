@@ -26,11 +26,26 @@ var clientCommand = &cobra.Command{
 	},
 }
 
+var (
+	flagAddress  string
+	flagName     string
+	flagStrategy string
+	flagTimeout  time.Duration
+)
+
 func init() {
+	clientCommand.PersistentFlags().StringVarP(&flagAddress, "address", "a",
+		"http://127.0.0.1:8000/", "address/url of the callbreak server")
+	clientCommand.PersistentFlags().StringVarP(&flagName, "name", "n",
+		"me", "your name for the game")
+	clientCommand.PersistentFlags().StringVarP(&flagStrategy, "strategy", "s",
+		"basic", "your default strategy in case of timeout")
+	clientCommand.PersistentFlags().DurationVarP(&flagTimeout, "timeout", "t",
+		30*time.Second, "timeout for your play")
 	rootCommand.AddCommand(clientCommand)
 }
 
-var baseurl = "http://localhost:3333/"
+var baseurl string
 var token *callbreak.Token
 var me int
 
@@ -65,7 +80,7 @@ func postNew() error {
 	client := http.Client{}
 	resp, err := client.Post(baseurl+"new", "application/json", nil)
 	if err != nil {
-		panic(fmt.Errorf("could not post to /new"))
+		panic(fmt.Errorf("could not post to /new: %v", err))
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -154,26 +169,29 @@ func postBreak(token *callbreak.Token, card deck.Card) string {
 }
 
 func registerPlayers() {
-	for i := 0; i < callbreak.NPlayers; i++ {
-		timeout := time.Second
+	for i := 1; i < callbreak.NPlayers; i++ {
 		name := fmt.Sprintf("bot%d", i)
-		if i == callbreak.NPlayers-1 {
-			timeout = 5 * time.Second // TODO change this to 30s
-			name = "me"
-		}
-		config := callbreak.PlayerConfig{
+		config := callbreak.PlayerConfig{ // TODO make bots configurable
 			Name:     name,
 			Strategy: "basic",
-			Timeout:  timeout,
+			Timeout:  time.Second,
 		}
 		postRegister(&config)
 	}
+	postRegister(&callbreak.PlayerConfig{
+		Name:     flagName,
+		Strategy: flagStrategy,
+		Timeout:  flagTimeout,
+	})
 	log.Infof("returning from registering players")
 }
 
 func runClient(cmd *cobra.Command, args []string) {
 	// todo discard log for now. eventually put it in a file
 	log.SetOutput(io.Discard)
+
+	// TODO change this to use viper when viper is added
+	baseurl = flagAddress
 
 	err := postNew()
 	if err != nil {
