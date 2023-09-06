@@ -25,7 +25,7 @@ go install github.com/prasantadh/callbreak-go/cmd/callbreak-go@latest
 ## run the server
 %HOMEPATH%\go\bin\callbreak-go server
 ## on a different terminal window, use the client to connect and play
-%HOMEPATH\go\bin\callbreak-go client
+%HOMEPATH%\go\bin\callbreak-go client
 ```
 
 
