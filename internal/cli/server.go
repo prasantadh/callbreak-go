@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -23,7 +24,16 @@ var serverCommand = &cobra.Command{
 	},
 }
 
+var (
+	flagHost string
+	flagPort int
+)
+
 func init() {
+	serverCommand.PersistentFlags().StringVarP(&flagHost, "address", "a", "0.0.0.0",
+		"address to listen on ex. 127.0.0.1")
+	serverCommand.PersistentFlags().IntVarP(&flagPort, "port", "p", 8000,
+		"port to listen on")
 	rootCommand.AddCommand(serverCommand)
 }
 
@@ -223,7 +233,7 @@ func runServer(cmd *cobra.Command, args []string) {
 	http.HandleFunc("/break", handleBreak)
 	http.HandleFunc("/query", handleQuery)
 
-	err := http.ListenAndServe(":3333", nil)
+	err := http.ListenAndServe(fmt.Sprintf("%s:%d", flagHost, flagPort), nil)
 	if errors.Is(err, http.ErrServerClosed) {
 		log.Infof("server closed.")
 	} else {
