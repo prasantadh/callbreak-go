@@ -173,7 +173,7 @@ func registerPlayers() {
 		name := fmt.Sprintf("bot%d", i)
 		config := callbreak.PlayerConfig{ // TODO make bots configurable
 			Name:     name,
-			Strategy: "basic",
+			Strategy: "random",
 			Timeout:  time.Second,
 		}
 		postRegister(&config)
